@@ -276,12 +276,28 @@ Below is the list of possible keywords/options and their explanation:<br>
 	- `focus` - moves keyboard focus to the widget.
 	- `icon` - sets icon for either widget or main window. `text` is used as the name of icon file. This option makes sense for checkbox, pushbutton and radiobutton widgets only.
 	- `iconsize` - sets a maximum size for icon in pixels. Uses `text` argument as an integer value to set. Default size is set by current theme. Smaller icons are not scaled.
+
+		>Note: this option can be set using stylesheets for a particular widget, class of widgets or all classes of widgets that support icons, e.g.:
+		>`"QPushButton {icon-size:20px; }"`
+
 	- `password` - sets the echo mode for textbox widget to password.
 	- `picture` - changes type of label widget to picture. `text` is used as the name of file with the content.
 	- `placeholder` - sets the value of the placeholder text for textbox widget. Uses `text` argument as the value to set.
 	- `stylesheet`- sets stylesheet for either widget or whole dialod box. Uses `text` argument as the value to set. Stylesheet might contain styles for particular widget or for classes of widgets. If set for a container widget or for whole dialog box it might affect child widgets of a particular class. See [Qt Style Sheet](http://doc.qt.io/qt-4.8/stylesheet-syntax.html) for more information.
 
 		>Note: new stylesheet completely replaces previously set value regardless which styles are setup.
+
+		Below table provides references to Qt classnames that migt be needed to use the Qt Style Sheet functionality.
+
+		|Widget type|Qt classname|
+		|-----------|------------|
+		|checkbox|QCheckBox|
+		|groupbox|QGroupBox|
+		|label|QLabel|
+		|pushbutton|QPushButton|
+		|radiobutton|QRadioButton|
+		|separator|QFrame|
+		|textbox|QLabel - stylesheets are applied only to the text label in front of the edit field|
 
 	- `text` - sets the value of the text to edit for textbox widget. For all the rest types of widgets is a synonym to `title` option. It is more readable for label widgets rather than `title` as emphasizes change its type to text. Uses `text` argument as the value to set.
 	- `title` - changes the title of either widget or main window. For label widget changes its type to text. Uses `text` argument as the value to set.
@@ -573,7 +589,7 @@ Next, the script draws, say, "welcome" dialog with options Next and Cancel and w
 
 Once the script continues it modifies the dialog with appropriate information and leaves only Cancel pushbutton. The long-run job is run in the background to return control to the shell to allow it to process signals. In the below example the `sleep 10&` command simulates the long-run process.
 
-At this point the background job is waited for. If the user cancels the process (clicks the Cancel button, presses Esc key, etc.) the `dialogbox` process is terminated and the trap catches the signal which in turn terminates the long-run process and exits the script with exit status of `E_CANCEL` value.
+At this point the background job is waited for. If the user cancels the process (clicks the Cancel button, presses `Esc` key, etc.) the `dialogbox` process is terminated and the trap catches the signal which in turn terminates the long-run process and exits the script with exit status of `E_CANCEL` value.
 
 But if the user did not cancel the process it finishes successfully and the script modifies the dialog appropriately, switches off the child processes monitoring and simply waits for the user to complete interaction with the dialog. The script completes with exit status of `E_SUCCESS`.
 
