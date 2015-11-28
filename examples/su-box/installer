@@ -1,0 +1,89 @@
+#!/bin/bash
+
+#
+# Su-box installer version 1.0
+#
+# Copyright (C) 2015 Andriy Martynets <martynets@volia.ua>
+#--------------------------------------------------------------------------------------------------------------
+# This file is part of su-box.
+#
+# Su-box is free software: you can redistribute it and/or modify it under the terms of
+# the GNU General Public License as published by the Free Software Foundation,
+# either version 3 of the License, or (at your option) any later version.
+#
+# Su-box is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with su-box.
+# If not, see http://www.gnu.org/licenses/.
+#--------------------------------------------------------------------------------------------------------------
+#
+
+# System specific standard development packages (not virtual ones) that might be needed to install dependencies:
+CC="gcc"
+MAKE="make"
+CLIB="libc6-dev"
+
+. ../shared_files/install_functions
+
+DEPENDENCIES=( "${DEPENDENCIES[@]}" \
+"execpty" \
+"true" \
+"https://github.com/martynets/execpty/" \
+"<a href=\\\"https://github.com/martynets/execpty/\\\">Execpty package</a> is critical dependency." \
+)
+
+check_execpty()
+{
+	type execpty &>/dev/null && return 0
+	return 1
+}
+
+install_execpty()
+{
+	tmpdir=$( mktemp -d )
+
+	trap "while jobs % &>/dev/null; do kill %; wait %; done; rm -rf $tmpdir" EXIT
+	trap "exit" TERM INT HUP QUIT
+
+	$PKGCHCK "$CC" &> /dev/null || $PKGINST "$CC" &> /dev/null &
+	wait
+	$PKGCHCK "$MAKE" &> /dev/null || $PKGINST "$MAKE" &> /dev/null &
+	wait
+	$PKGCHCK "$CLIB" &> /dev/null || $PKGINST "$CLIB" &> /dev/null &
+	wait
+	$PKGCHCK "$CC" "$MAKE" "$CLIB" &> /dev/null || exit
+
+	wget --quiet --no-check-certificate --continue -O - https://github.com/martynets/execpty/archive/1.0.tar.gz |\
+		tar --extract --ungzip --wildcards --directory $tmpdir &>/dev/null &
+	wait
+	pushd $tmpdir/execpty-1.0 &>/dev/null
+	make &
+	wait
+	make install &
+	wait
+	popd &>/dev/null
+	exit
+}
+
+DEPENDENCIES=( "${DEPENDENCIES[@]}" \
+"su-box" \
+"true" \
+"https://github.com/martynets/dialogbox/examples/su-box/" \
+"<a href=\\\"https://github.com/martynets/dialogbox/examples/su-box/\\\">Su-box</a> is the target application." \
+)
+
+check_su-box()
+{
+	type su-box &>/dev/null && return 0
+	return 1
+}
+
+install_su-box()
+{
+	# This is not a long-lasting process. No need in the template stuff...
+	install --mode=a=rx,u+w --target-directory=/usr/bin ./su-box
+}
+
+main

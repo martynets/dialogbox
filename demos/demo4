@@ -1,0 +1,95 @@
+#!/bin/bash
+
+FIFOIN="./pipe-in"		# FIFO the dialogbox process writes to
+FIFOOUT="./pipe-out"	# FIFO the dialogbox process reads from
+
+rm -rf "$FIFOIN" "$FIFOOUT"	# sanity removal
+
+mkfifo "$FIFOIN" "$FIFOOUT"
+
+dialogbox <"$FIFOOUT" >"$FIFOIN" &
+DBPID=$!			# PID of the dialogbox, if you need it for any purpose... e.g. to kill it
+
+trap "kill $DBPID &>/dev/null; wait $DBPID; rm -rf \"$FIFOIN\" \"$FIFOOUT\"" EXIT
+
+# If your script doesn't use standard input/output you may redirect them to the pipes
+# and don't bore with redirection for each input/output command.
+# Tools used might output something to the pipe but it is unlikely it will be understood by the
+# dialogbox application. So, this is 99.99% safe...
+# The following two commands will do the job:
+#	exec >"$FIFOOUT"
+#	exec <"$FIFOIN"
+# After that you are free to remove the FIFOs from the filesystem:
+#	rm -rf "$FIFOIN" "$FIFOOUT"
+# And, finally, you can omit the exit trap as it is safe to exit from the script at any point now.
+
+
+
+cat >"$FIFOOUT" <<EODEMO
+add label "<small>This script demonstrates bidirectional communication with the dialogbox application using FIFOs." note
+set note stylesheet "qproperty-textInteractionFlags: NoTextInteraction;"
+add separator
+add groupbox horizontal
+add checkbox "&Option 1" cb1
+add pushbutton "&Disable option 1" dsbl
+add groupbox horizontal
+add stretch
+add pushbutton O&k okay apply exit
+add pushbutton &Cancel cancel exit
+end groupbox
+set title "Demo 3"
+set okay default
+set cb1 focus
+EODEMO
+
+
+flag=0
+cbflag=0
+
+while IFS=$'=' read key value
+do
+	case $key in
+		dsbl)
+		# Note: if you use echo command don't forget to escape quotes as echo "eats" them
+		#		and don't forget to escape ampersand as otherwise shell will interpret it
+			if [ "$cbflag" == "0" ]
+			then
+				echo disable cb1 >"$FIFOOUT"
+				echo set dsbl title \"\&Enable option 1\" >"$FIFOOUT"
+				cbflag=1
+			else
+				echo enable cb1 >"$FIFOOUT"
+				echo set dsbl title \"\&Disable option 1\" >"$FIFOOUT"
+				cbflag=0
+			fi
+			;;
+		cb1)
+		# Note: disabled widgets are not reported
+			if [ "$value" == "1" ]
+			then
+				echo Option 1 is checked
+			else
+				echo Option 1 is unchecked
+			fi
+			;;
+		okay)
+			flag=1
+			echo User clicked Ok pushbutton
+			;;
+		cancel)
+			flag=1
+			echo User clicked Cancel pushbutton
+			;;
+	esac
+done <"$FIFOIN"
+
+# Note: if for a reason you break from the loop you can check whether the dialog
+# was closed by the user with command similar to the below one:
+# kill -0 $DBPID &>/dev/null || exit
+
+if [ "$flag" == "0" ]
+then
+	echo User closed the window
+fi
+
+exit 0

@@ -1,0 +1,48 @@
+#!/bin/bash
+
+#
+# Lxlogout-box installer version 1.0
+#
+# Copyright (C) 2015 Andriy Martynets <martynets@volia.ua>
+#--------------------------------------------------------------------------------------------------------------
+# This file is part of lxlogout-box.
+#
+# Lxlogout-box is free software: you can redistribute it and/or modify it under the terms of
+# the GNU General Public License as published by the Free Software Foundation,
+# either version 3 of the License, or (at your option) any later version.
+#
+# Lxlogout-box is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with lxlogout-box.
+# If not, see http://www.gnu.org/licenses/.
+#--------------------------------------------------------------------------------------------------------------
+#
+
+. ../shared_files/install_functions
+
+DEPENDENCIES=( "${DEPENDENCIES[@]}" \
+"lxlogout-box" \
+"true" \
+"https://github.com/martynets/dialogbox/examples/lxlogout-box/" \
+"<a href=\\\"https://github.com/martynets/dialogbox/examples/lxlogout-box/\\\">Lxlogout-box</a> is the target application." \
+)
+
+check_lxlogout-box()
+{
+	type lxlogout-box &>/dev/null || return 1
+	readlink /usr/bin/lxde-logout || return 1
+	return 0
+}
+
+install_lxlogout-box()
+{
+	# This is not a long-lasting process. No need in the template stuff...
+	install --mode=a=rx,u+w --target-directory=/usr/bin ./lxlogout-box
+	[ -r /usr/bin/lxde-logout ] || exit
+	[ ! -r /usr/bin/lxde-logout-original ] && mv -n -T /usr/bin/lxde-logout /usr/bin/lxde-logout-original
+	ln --force --symbolic ./lxlogout-box /usr/bin/lxde-logout
+}
+
+main

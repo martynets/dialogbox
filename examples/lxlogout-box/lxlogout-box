@@ -1,0 +1,217 @@
+#!/bin/bash
+
+#
+# Lxlogout-box version 1.0
+#
+# Copyright (C) 2015 Andriy Martynets <martynets@volia.ua>
+#--------------------------------------------------------------------------------------------------------------
+# This file is part of lxlogout-box.
+#
+# Lxlogout-box is free software: you can redistribute it and/or modify it under the terms of
+# the GNU General Public License as published by the Free Software Foundation,
+# either version 3 of the License, or (at your option) any later version.
+#
+# Lxlogout-box is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with lxlogout-box.
+# If not, see http://www.gnu.org/licenses/.
+#--------------------------------------------------------------------------------------------------------------
+#
+
+# =========================================================================================================
+# Set commands specific for current environment
+# =========================================================================================================
+# Lock command
+if type lxlock &> /dev/null
+then
+	COMMAND_LOCK="lxlock"
+elif type xdg-screensaver &> /dev/null
+then
+	COMMAND_LOCK="xdg-screensaver lock"
+else
+	COMMAND_LOCK="false"
+fi
+
+# Logout command
+if [ -n "$_LXSESSION_PID" ]
+then
+	COMMAND_LOGOUT="pkill lxsession"
+else
+	COMMAND_LOGOUT="openbox --exit"
+fi
+
+# User Switch command
+if [ -n "$XDG_SEAT_PATH" ]
+then
+	COMMAND_SWITCH="dm-tool switch-to-greeter"	# LightDM
+elif ps -C gdmflexiserver &> /dev/null
+then
+	COMMAND_SWITCH="gdmflexiserver --startnew"	# GDM
+elif ps -C kdmctl &> /dev/null
+then
+	COMMAND_SWITCH="kdmctl reserve"				# KDM
+elif ps -C lxdm-binary &> /dev/null
+then
+	COMMAND_SWITCH="lxdm-binary -c USER_SWITCH"	# LXDM
+else
+	COMMAND_SWITCH="false"
+fi
+
+
+# =========================================================================================================
+# Initialize icon functions
+# =========================================================================================================
+if type icon-functions &> /dev/null
+then
+	. icon-functions
+	ICON_SIZE=24
+	icon_functions_init
+else
+	find_actions_icon()
+	{
+		:
+	}
+fi
+
+
+# =========================================================================================================
+# Find icons for buttons
+# =========================================================================================================
+ICON=""
+find_actions_icon system-shutdown
+shutdown_icon=${ICON:-"/usr/share/lxsession/images/system-shutdown.png"}
+
+ICON=""
+find_actions_icon gnome-session-reboot
+if [ -z "$ICON" ]
+then
+	find_actions_icon view-refresh
+fi
+reboot_icon=${ICON:-"/usr/share/lxsession/images/gnome-session-reboot.png"}
+
+ICON=""
+find_actions_icon gnome-session-suspend
+suspend_icon=${ICON:-"/usr/share/lxsession/images/gnome-session-suspend.png"}
+
+ICON=""
+find_actions_icon gnome-session-hibernate
+hibernate_icon=${ICON:-"/usr/share/lxsession/images/gnome-session-hibernate.png"}
+
+ICON=""
+find_actions_icon gnome-session-switch
+switch_icon=${ICON:-"/usr/share/lxsession/images/gnome-session-switch.png"}
+
+ICON=""
+find_actions_icon system-lock-screen
+lock_icon="$ICON"
+
+ICON=""
+find_actions_icon system-log-out
+logout_icon=${ICON:-"/usr/share/lxsession/images/system-log-out.png"}
+
+ICON=""
+find_actions_icon cancel
+if [ -z "$ICON" ]
+then
+	find_actions_icon process-stop
+fi
+cancel_icon="$ICON"
+
+IFS=$' \t\n'
+
+
+# =========================================================================================================
+# Form the prompt
+# =========================================================================================================
+message=${DESKTOP_SESSION-"LXDE"}
+type lsb_release &> /dev/null && message+=" "$(lsb_release -r -s)
+message="Logout $message session ?"
+
+
+# =========================================================================================================
+# Process response from the user
+# =========================================================================================================
+while IFS=$'=' read key value
+do
+	case $key in
+		shutdown)
+			exec sudo /sbin/halt
+			;;
+		reboot)
+			exec sudo /sbin/reboot
+			;;
+		suspend)
+			$COMMAND_LOCK
+			sleep 2
+			exec sudo /usr/sbin/pm-suspend
+			;;
+		hibernate)
+			$COMMAND_LOCK
+			sleep 2
+			exec sudo /usr/sbin/pm-hibernate
+			;;
+		switch)
+			$COMMAND_LOCK
+			exec $COMMAND_SWITCH
+			;;
+		lock)
+			exec $COMMAND_LOCK
+			;;
+		logout)
+			exec $COMMAND_LOGOUT
+			;;
+	esac
+done < <(
+
+dialogbox <<EOLOGOUT
+add label /usr/share/lxde/images/logout-banner.png picture
+add space 4 add separator
+add label "$message" msg
+set msg stylesheet "qproperty-wordWrap: false;
+					qproperty-textInteractionFlags: NoTextInteraction;
+					qproperty-alignment: AlignHCenter;
+					font: bold 14pt;
+					padding: 4px;"
+
+add pushbutton Shutdown shutdown exit
+set shutdown icon "$shutdown_icon"
+add space 9
+add pushbutton Reboot reboot exit
+set reboot icon "$reboot_icon"
+add space 9
+add pushbutton Suspend suspend exit
+set suspend icon "$suspend_icon"
+add space 9
+add pushbutton Hibernate hibernate exit
+set hibernate icon "$hibernate_icon"
+add space 9
+add pushbutton "Switch User" switch exit
+set switch icon "$switch_icon"
+add space 9
+add pushbutton "Lock Screen" lock exit
+set lock icon "$lock_icon"
+add space 9
+add pushbutton Logout logout exit
+set logout icon "$logout_icon"
+add space 9
+add pushbutton Cancel cancel exit
+set cancel icon "$cancel_icon"
+
+set title "$message"
+set icon "/usr/share/lxde/images/lxde-icon.png"
+
+set stylesheet "QPushButton {icon-size:18px; text-align:left; padding:3px; }"
+
+set cancel focus
+
+EOLOGOUT
+
+)
+
+
+# =========================================================================================================
+# User cancelled the dialog
+# =========================================================================================================
+exit 0

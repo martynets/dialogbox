@@ -1,0 +1,238 @@
+#!/bin/bash
+
+#
+# Su-box version 1.0
+#
+# Copyright (C) 2015 Andriy Martynets <martynets@volia.ua>
+#--------------------------------------------------------------------------------------------------------------
+# This file is part of su-box.
+#
+# Su-box is free software: you can redistribute it and/or modify it under the terms of
+# the GNU General Public License as published by the Free Software Foundation,
+# either version 3 of the License, or (at your option) any later version.
+#
+# Su-box is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with su-box.
+# If not, see http://www.gnu.org/licenses/.
+#--------------------------------------------------------------------------------------------------------------
+#
+
+PROJECT_NAME="su-box"
+VERSION="1.0"
+
+# Exit status:
+# 1	authentication failure (derived from su)
+E_SUCCESS=0
+E_ERROR=127
+E_CANCEL=128
+
+if ! type dialogbox &> /dev/null
+then
+	echo Dialogbox application is missing. Aborted.
+	exit $E_ERROR
+fi
+
+if ! type execpty &> /dev/null
+then
+	echo Execpty application is missing. Aborted.
+	exit $E_ERROR
+fi
+
+usage()
+{
+	cat << EOUSAGE
+Usage:
+	${0##*/} [-t|--terminal] [-u|--user USERNAME] [-c|--command] [COMMAND]
+	${0##*/} -h|--help
+	${0##*/} -v|--version
+GUI frontend for su command.
+
+Options are:
+	-h, --help	display this help and exit
+	-v, --version	output version information and exit
+	-t, --terminal	allow the command to interact with current terminal
+	-u, --user	specify the USERNAME to run as (root by default)
+	-c, --command	specify COMMAND and its arguments to run
+
+	If command is not specified it will be asked for.
+
+Exit status:
+	- $E_SUCCESS	success (--help or --version only)
+	- 1	authentication failure (derived from su)
+	- $E_ERROR	failure (with corresponding error message)
+	- $E_CANCEL	the user cancelled operation
+	- if the command is terminated by a signal - the signal number plus 128
+	- on success - exit status of the command executed
+
+More information on <https://github.com/martynets/dialogbox/examples/su-box/>.
+EOUSAGE
+}
+
+version()
+{
+	cat << EOVERSION
+$PROJECT_NAME v$VERSION
+Copyright (C) 2015 Andriy Martynets <martynets@volia.ua>
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.
+This program comes with ABSOLUTELY NO WARRANTY.
+This is free software, and you are welcome to redistribute it
+under certain conditions. See the GNU GPL for details.
+
+More information on <https://github.com/martynets/dialogbox/examples/su-box/>.
+EOVERSION
+}
+
+if type icon-functions &> /dev/null
+then
+	. icon-functions
+	#ICON_SIZE=48
+	icon_functions_init
+else
+	find_apps_icon()
+	{
+		return 0
+	}
+
+	find_actions_icon()
+	{
+		return 0
+	}
+fi
+
+USER=""
+PASSWORD=""
+COMMAND=""
+TERMINAL=""
+
+while [ $# -gt 0 ]
+do
+	case $1 in
+		-h | --help)
+			usage
+			exit $E_SUCCESS
+			;;
+		-v | --version)
+			version
+			exit $E_SUCCESS
+			;;
+		-u | --user)
+			shift
+			USER="$1"
+			;;
+		-t | --terminal)
+			TERMINAL="true"
+			;;
+		-c | --command)
+			shift
+			;&
+		*)
+			COMMAND="$@"
+			break
+			;;
+	esac
+
+	shift
+done
+
+[ "$USER" == "$(id -un)" ] && exec $COMMAND
+
+ICON=""
+if [ -n "$COMMAND" ]
+then
+	find_apps_icon system-users || find_actions_icon system-run
+else
+	find_actions_icon system-run || find_apps_icon system-users
+fi
+auth_icon=${ICON:-"/usr/share/pixmaps/debian-security.png"}
+
+coproc dialogbox
+INPUTFD=${COPROC[0]}
+OUTPUTFD=${COPROC[1]}
+DBPID=$COPROC_PID
+
+cat >&$OUTPUTFD <<-EOUSER
+	add label "$auth_icon" img picture
+	step horizontal
+	add textbox "User name:" usr "$USER" "Enter the username"
+	add textbox "Password:" pswd password "$PASSWORD" "Enter the password"
+	step vertical
+	add separator horizontal
+	add groupbox horizontal
+	add stretch
+	add pushbutton Ok okay apply exit
+	add pushbutton Cancel cancel exit
+
+	set icon "$auth_icon"
+
+	set usr stylesheet "min-width: 5em;"
+	set pswd stylesheet "min-width: 5em;"
+
+	set img stylesheet "padding: 10px;"
+
+	set okay default
+
+EOUSER
+
+if [ -n "$COMMAND" ]
+then
+	cat >&$OUTPUTFD <<-EOUSER
+		position usr
+		add label "Command:<blockquote><code>$COMMAND</code></blockquote>requested to be run with different user credentials. Please provide the user's password:" msg
+		set title "User credentials required"
+		set msg stylesheet "qproperty-textInteractionFlags: NoTextInteraction; min-width: 20em;"
+		disable usr
+		set pswd focus
+EOUSER
+else
+	cat >&$OUTPUTFD <<-EOUSER
+		position usr
+		add textbox "Command:" cmd "" "Enter the command to run"
+		set title "Run as..."
+		set cmd stylesheet "min-width: 5em;"
+		set cmd focus
+		set stylesheet "QLineEdit { min-width: 12em; };"
+EOUSER
+fi
+
+if [ -z "$USER" ]
+then
+	USER="root"
+	echo set usr text root >&$OUTPUTFD
+fi
+
+accepted=0
+
+while IFS=$'=' read key value
+do
+	case $key in
+		cmd)
+			COMMAND="$value"
+			;;
+		usr)
+			USER="$value"
+			;;
+		pswd)
+			PASSWORD="$value"
+			;;
+		okay)
+			accepted=1
+			;;
+	esac
+done <&$INPUTFD
+
+wait $DBPID
+
+[ "$accepted" == "1" ] || exit $E_CANCEL
+
+if [ -z "$TERMINAL" ]
+then
+	echo $PASSWORD | execpty su $USER -c $COMMAND &>/dev/null
+else
+	exec 3<&0
+	exec 4>&1
+	exec 5>&2
+	echo $PASSWORD | execpty su $USER -c "$COMMAND <&3 >&4 2>&5" &>/dev/null
+fi

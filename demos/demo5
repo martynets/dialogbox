@@ -1,0 +1,74 @@
+#!/bin/bash
+
+coproc dialogbox		# Note: bash supports only one co-process
+INPUTFD=${COPROC[0]}	# file descriptor the dialogbox process writes to
+OUTPUTFD=${COPROC[1]}	# file descriptor the dialogbox process reads from
+DBPID=$COPROC_PID		# PID of the dialogbox, if you need it for any purpose... e.g. to kill it
+
+# If your script doesn't use standard input/output you may redirect them to the pipes
+# and don't bore with redirection for each input/output command.
+# Tools used might output something to the pipe but it is unlikely it will be understood by the
+# dialogbox application. So, this is 99.99% safe...
+# The following two commands will do the job:
+#	exec <&${COPROC[0]}
+#	exec >&${COPROC[1]}
+
+# Exit status values:
+E_SUCCESS=0
+E_CANCEL=1
+
+# The trap checks whether the dialogbox application was terminated and if so
+# kills the current job and exits the script
+trap "if ! kill -0 $DBPID &>/dev/null; then kill %; echo The script cancelled by user; exit $E_CANCEL; fi" CHLD
+set -o monitor	# Enable SIGCHLD
+
+cat >&$OUTPUTFD <<EODEMO
+add label "<small>This script demonstrates the dialogbox application monitoring technique during bidirectional communication with it using pipes." note
+set note stylesheet "qproperty-textInteractionFlags: NoTextInteraction;"
+add separator
+add label "Click Next to start a long-run process" msg
+set msg stylesheet "min-width: 20em;"
+add groupbox horizontal
+add stretch
+add pushbutton &Next okay
+add pushbutton &Cancel cancel exit
+end groupbox
+set title "Demo 5"
+set okay default
+set okay focus
+EODEMO
+
+while IFS=$'=' read key value
+do
+	case $key in
+		okay)
+			echo User initiated the long-run process
+			break
+			;;
+	esac
+done <&$INPUTFD
+
+cat >&$OUTPUTFD <<EODEMO
+set msg title "The long-run process is in progress.<br>Please wait..."
+remove okay
+set cancel default
+set cancel focus
+EODEMO
+
+# The long-run process is run in background to return control to the shell
+# to allow it process signals immediately
+sleep 10&
+wait %
+echo The long-run process completed
+
+cat >&$OUTPUTFD <<EODEMO
+set msg title "The long-run process completed!"
+set cancel title &Ok
+EODEMO
+
+set +o monitor	# Disable SIGCHLD
+wait $DBPID		# Wait the user to complete the dialog
+
+echo The script completed successfuly
+
+exit $E_SUCCESS

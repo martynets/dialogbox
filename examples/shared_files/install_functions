@@ -1,0 +1,409 @@
+#!/bin/bash
+
+#
+# Install functions version 1.0
+#
+# Copyright (C) 2015 Andriy Martynets <martynets@volia.ua>
+#--------------------------------------------------------------------------------------------------------------
+# This program is free software: you can redistribute it and/or modify it under the terms of
+# the GNU General Public License as published by the Free Software Foundation,
+# either version 3 of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with this program.
+# If not, see http://www.gnu.org/licenses/.
+#--------------------------------------------------------------------------------------------------------------
+#
+
+################################################################################
+# Usage:
+#	- source this file
+#	- add structures to DEPENDENCIES array
+#	- define install_<package name> functions using template below
+#	- call main
+# Use PKGCHCK, PKGINST, E_SUCCESS and E_ERROR values defined below.
+################################################################################
+# Array of structures:
+#	- package name (it is also used to name the check and installation functions
+#	  as check__<package name> and install_<package name>)
+#	- package priority (true - critical; false - optional)
+#	- package URL
+#	- package description
+# For better user experience it is recommended to add critical packages at the
+# begining of the array and optional ones at the end.
+# Xdg-bash-functions is added by these functions at the end.
+# Dialogbox is dependency for this script and is silently installed first.
+#
+declare -a DEPENDENCIES
+#
+# Template of check_<package name> function.
+#
+#	check_<package name>()
+#	{
+#		if <package is present>
+#		then
+#			return 0
+#		fi
+#
+#		return 1
+#	}
+#
+# Template of install_<package name> function.
+# Each command is run in background and is waited for to allow the shell to
+# process signals immediately. The shell does exit in response to fatal signals.
+# The exit trap kills all background processes and does the final clean up.
+# All this provides immediate response to the user's request to cancel the
+# installation process.
+#
+#	install_<package name>()
+#	{
+#		<create temporary files/directories>
+#
+#		trap "while jobs % &>/dev/null; do kill %; wait %; done; <remove temporary files/directories>" EXIT
+#		trap "exit" TERM INT HUP QUIT
+#
+#		command1 &
+#		wait
+#		command2 &
+#		wait
+#		...
+#		commandN &
+#		wait
+#		exit
+#	}
+#
+# System specific standard development packages (not virtual ones) that might be
+# needed to install dependencies:
+CXX="g++"
+MAKE="make"
+QT4="libqt4-dev"
+#
+# System specific package management tools:
+# PKGCHCK command checks whether the standard packages (from system
+# repositories) are present in the system (returns success if present)
+PKGCHCK="dpkg -s"
+# PKGINST command installs packages from system repositories
+PKGINST="apt-get --assume-yes --no-upgrade --no-install-recommends --no-install-suggests install"
+#
+# Exit status values:
+E_SUCCESS=0
+E_ERROR=127
+E_CANCEL=128
+#
+################################################################################
+
+check_dialogbox()
+{
+	if ! type dialogbox &> /dev/null
+	then
+		pushd ../../  &> /dev/null
+		if ! type ./dialogbox &> /dev/null
+		then
+			if [ "$(id --user)" == "0" ]
+			then
+				echo -n "Checking and installing development tools... "
+				$PKGCHCK "$CXX" &> /dev/null || $PKGINST "$CXX" &> /dev/null
+				$PKGCHCK "$MAKE" &> /dev/null || $PKGINST "$MAKE" &> /dev/null
+				$PKGCHCK "$QT4" &> /dev/null || $PKGINST "$QT4" &> /dev/null
+				! $PKGCHCK "$CXX" "$MAKE" "$QT4" &> /dev/null && echo "Failed!" && exit $E_ERROR
+				echo "Done."
+			fi
+			if $PKGCHCK "$CXX" "$MAKE" "$QT4" &> /dev/null
+			then
+				echo -n "Compiling dialogbox tool... "
+				qmake &> /dev/null
+				make &> /dev/null
+				! type ./dialogbox &> /dev/null && echo "Failed!" && exit $E_ERROR
+				echo "Done."
+			fi
+		fi
+		if type ./dialogbox &> /dev/null
+		then
+			if [ "$(id --user)" == "0" ]
+			then
+				echo -n "Installing dialogbox tool... "
+				! make install &> /dev/null && echo "Failed!" && exit $E_ERROR
+				echo "Done."
+			else
+				export PATH="$PATH:$PWD"	# this will be reset to defaults by su
+			fi
+		fi
+		popd  &> /dev/null
+	fi
+}
+
+run_as_root()
+{
+	if [ "$(id --user)" != "0" ]
+	then
+
+		type su-box &> /dev/null && exec su-box "$0"
+
+		[ -t 0 ] && echo "Installation process requires modifications in /usr/bin directory." && \
+					echo "To continue please authenticate as the root" && \
+					exec su -c "$0"
+
+		type gksu &> /dev/null && exec gksu -u root "$0"
+
+		if type dialogbox &> /dev/null
+		then
+			dialogbox > /dev/null <<EOUSER
+				add label ../../images/cross-mark.png img picture
+				step horizontal
+				add label "Installation process requires modifications in /usr/bin directory.<br>Please run it with root account!" msg
+				step vertical
+				add separator horizontal
+				add groupbox horizontal
+				add stretch
+				add pushbutton Ok okay exit
+
+				set title "Root privilages required!"
+				set icon "/usr/share/lxde/images/lxde-icon.png"
+
+				set okay focus
+				set okay default
+
+				set msg stylesheet "min-width: 20em;"
+				set img stylesheet "padding: 10px;"
+
+EOUSER
+		else
+			echo "Installation process requires modifications in /usr/bin directory."
+			echo "Please run it with root account!"
+		fi
+
+		exit $E_ERROR
+	fi
+}
+
+run_installation()
+{
+
+	ICON=""
+	if type icon-functions &> /dev/null
+	then
+		. icon-functions
+		icon_functions_init
+		find_apps_icon system-software-install
+	fi
+	: ${ICON:="/usr/share/pixmaps/debian-logo.png"}
+
+	cat <<-EOINSTALL
+		add label ../../images/question-mark.png img picture
+		step horizontal
+		add groupbox "Download and install the following packages:" lst vertical
+		step vertical
+		add separator horizontal
+		add groupbox horizontal
+		add stretch
+		add pushbutton Next next apply
+		add pushbutton Cancel cancel exit
+
+		set title "Select packages"
+		set icon "$ICON"
+
+		set img stylesheet "padding: 10px;"
+
+		set next default
+		position lst onto
+
+EOINSTALL
+
+	not_installed=0		# Flag that indicates there is at least one package that we have to install.
+	last_optional=""	# Index of last optional package if any. It is used to break the loop below.
+
+	for (( i=0; i<${#DEPENDENCIES[@]}; i+=4 ))
+	do
+		if ! check_${DEPENDENCIES[i]}
+		then
+			[ "$not_installed" == "1" ] && echo add space 20
+			cat <<-EOINSTALL
+				add checkbox "${DEPENDENCIES[i]}" cb$i checked
+				add label "${DEPENDENCIES[ ((i+3)) ]}" lb$i
+EOINSTALL
+			if [ "${DEPENDENCIES[ ((i+1)) ]}" == "true" ]
+			then
+				echo disable cb$i
+			else
+				last_optional="$i"
+			fi
+			not_installed=1
+		else
+			DEPENDENCIES[ ((i+1)) ]="false"	# This field is used later as flag whether to install the package
+		fi
+	done
+
+	if [ "$not_installed" == "1" ]
+	then
+
+		while IFS=$'=' read key value
+		do
+			case $key in
+				cb*)
+					i=${key:2}
+					[ "$value" == "1" ] && DEPENDENCIES[ ((i+1)) ]="true"
+					[ "$i" == "$last_optional" ] && break
+					;;
+				next)
+					[ -z "$last_optional" ] && break
+					;;
+			esac
+		done
+
+		cat <<-EOINSTALL
+			remove next
+			set img picture ""
+			position lst
+			add label "" msg
+			set msg stylesheet "min-width: 20em;"
+			remove lst
+			add label ../../images/spinner.gif spinner animation
+			set spinner stylesheet "qproperty-alignment: AlignHCenter;"
+			set title "Installing..."
+EOINSTALL
+
+		for (( i=0; i<${#DEPENDENCIES[@]}; i+=4 ))
+		do
+			if [ "${DEPENDENCIES[ ((i+1)) ]}" == "true" ]
+			then
+				cat <<-EOINSTALL
+						set msg text "<a href=\"${DEPENDENCIES[ ((i+2)) ]}\">${DEPENDENCIES[i]} package</a> is being downloaded and installed.<br><br>Please wait...<br>"
+EOINSTALL
+
+################################################################################
+#
+# Some comments to the code below:
+#	- the installation process is run as a background job
+#	- its job ID is calculated notwithstanding that it is predictable
+#	- it is waited for with active SIGCHLD trap. The last one kills the
+#	  installation job once the dialogbox process no longer exists (cancelled by
+#	  the user)
+#	- the installation job's commands must be run in background and waited for
+#	  to allow the subshell to process signals immediately
+#	- the installation job's exit trap must kill all running child processes and
+#	  do final cleanup in response to terminate signal sent once the user
+#	  cancelled the installation process (e.g. clicked the cancel button)
+#
+################################################################################
+
+				set +o monitor	# Temporary disable SIGCHLD before running subshell
+				install_${DEPENDENCIES[i]} &
+
+				JID=$(jobs %+ 2>/dev/null)
+				JID=${JID#*[}
+				JID=${JID%%]*}	# in fact it is predictably 2
+
+				trap "if ! kill -0 $DBPID &>/dev/null; then kill %$JID &>/dev/null; exit $E_CANCEL; fi" CHLD
+				set -o monitor	# Enable SIGCHLD
+				kill -0 $DBPID &>/dev/null || exit $E_CANCEL	# Check whether the dialog wasn't closed while SIGCHLD is disabled
+				wait %$JID
+				trap "kill -0 $DBPID &>/dev/null || exit $E_CANCEL" CHLD
+
+################################################################################
+
+				if ! check_${DEPENDENCIES[i]}
+				then
+					cat <<-EOINSTALL
+						remove spinner
+						set img picture ../../images/exclamation-mark.png
+						set msg text "<p>${DEPENDENCIES[i]} package is still missing.</p>
+							<p/>
+							<p>To repeat the installation, please, check your Internet connectivity and \
+							re-run this application.</p>
+							<p/>
+							<p>Alternatively you may check the README file at \
+							<a href=\"${DEPENDENCIES[ ((i+2)) ]}\">${DEPENDENCIES[ ((i+2)) ]}</a>
+							for its manual installation.</p>"
+						set title "Installation failed!"
+						set cancel default
+						set cancel focus
+EOINSTALL
+					exit $E_ERROR
+				fi
+			fi
+		done
+
+		cat <<-EOINSTALL
+			remove spinner
+			set cancel title Ok
+			set cancel default
+			set cancel focus
+			set img picture ../../images/check-mark.png
+			set msg text "Congratulations!<br>The installation has completed successfully."
+			set title "Installation succeeded!"
+EOINSTALL
+
+
+	else
+		cat <<-EOINSTALL
+			remove next
+			set cancel title Ok
+			set cancel default
+			set cancel focus
+			set img picture ../../images/check-mark.png
+			position lst
+			add label "Congratulations!<br>You have the package already installed. There is nothing to install." msg
+			set msg stylesheet "min-width: 20em;"
+			remove lst
+			set title "Installed!"
+EOINSTALL
+	fi
+
+}
+
+check_xdg-bash-functions()
+{
+	type icon-functions &>/dev/null && return 0
+	return 1
+}
+
+install_xdg-bash-functions()
+{
+	tmpdir=$( mktemp -d )
+
+	trap "while jobs % &>/dev/null; do kill %; wait %; done; rm -rf $tmpdir" EXIT
+	trap "exit" TERM INT HUP QUIT
+
+	wget --quiet --no-check-certificate --continue -O - https://github.com/martynets/xdg-bash-functions/archive/1.1.tar.gz |\
+		tar --extract --ungzip --wildcards --directory $tmpdir *-functions &>/dev/null &
+	wait
+	find $tmpdir -type f -execdir install --mode=a=rx,u+w --target-directory=/usr/bin {} + &
+	wait
+	exit
+}
+
+main()
+{
+
+	trap "exit" TERM INT HUP QUIT	# this is to suppress detailed output from the shell
+									# not killing itself by SIGINT should not be an issue for this script
+									# this subject described in details here: http://www.cons.org/cracauer/sigint.html
+
+	DEPENDENCIES=( "${DEPENDENCIES[@]}" \
+	"xdg-bash-functions" \
+	"false" \
+	"https://github.com/martynets/xdg-bash-functions/" \
+	"<a href=\\\"https://github.com/martynets/xdg-bash-functions/\\\">Xdg-bash-functions package</a> is optional but highly recommended as it provides support for icon themes for shell scripts." \
+	)
+
+	check_dialogbox
+	run_as_root
+
+	coproc dialogbox
+	exec <&${COPROC[0]}
+	exec >&${COPROC[1]}
+	DBPID=$COPROC_PID
+
+	trap "kill -0 $DBPID &>/dev/null || exit $E_CANCEL" CHLD
+	set -o monitor	# Enable SIGCHLD
+
+	run_installation
+
+	set +o monitor	# Disable SIGCHLD
+	wait $DBPID
+
+	exit $E_SUCCESS
+}

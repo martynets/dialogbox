@@ -1,0 +1,53 @@
+#!/bin/bash
+
+flag=0
+
+while IFS=$'=' read key value
+do
+	case $key in
+		cb1)
+			if [ "$value" == "1" ]
+			then
+				echo Option 1 is checked
+			else
+				echo Option 1 is unchecked
+			fi
+			;;
+		txt1)
+			echo Text entered: $value
+			;;
+		okay)
+			flag=1
+			echo User clicked Ok pushbutton
+			;;
+		cancel)
+			flag=1
+			echo User clicked Cancel pushbutton
+			;;
+	esac
+done < <(
+
+dialogbox <<EODEMO
+add label "<small>This script demonstrates unidirectional communication with the dialogbox application." note
+set note stylesheet "qproperty-textInteractionFlags: NoTextInteraction;"
+add separator
+add checkbox "&Option 1" cb1
+add textbox "&Text field" txt1 "text to edit"
+add groupbox horizontal
+add stretch
+add pushbutton O&k okay apply exit
+add pushbutton &Cancel cancel exit
+end groupbox
+set title "Demo 2"
+set okay default
+set cb1 focus
+EODEMO
+
+)
+
+if [ "$flag" == "0" ]
+then
+	echo User closed the window
+fi
+
+exit 0

@@ -1,0 +1,27 @@
+#!/bin/bash
+
+dialogbox <<EODEMO
+add label "<small>This script demonstrates the dialogbox application exit codes usage." note
+set note stylesheet "qproperty-textInteractionFlags: NoTextInteraction;"
+add separator
+add label "<big>Please confirm the operation" msg
+set msg stylesheet "qproperty-wordWrap: false;
+					qproperty-textInteractionFlags: NoTextInteraction;"
+
+add groupbox horizontal
+add stretch
+add pushbutton C&ontinue apply exit
+add pushbutton C&ancel exit
+end groupbox
+set title "Demo 1"
+EODEMO
+
+if [ "$?" == "0" ]
+then
+	echo User rejected dialog
+else
+	echo User accepted dialog
+fi
+
+exit 0
+
