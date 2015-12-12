@@ -33,11 +33,11 @@ set note stylesheet "qproperty-textInteractionFlags: NoTextInteraction;"
 add separator
 add checkbox "&Option 1" cb1
 add textbox "&Text field" txt1 "text to edit"
-add groupbox horizontal
+add frame horizontal
 add stretch
 add pushbutton O&k okay apply exit
 add pushbutton &Cancel cancel exit
-end groupbox
+end frame
 set title "Demo 2"
 set okay default
 set cb1 focus

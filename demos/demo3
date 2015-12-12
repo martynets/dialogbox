@@ -18,14 +18,14 @@ cat >&$OUTPUTFD <<EODEMO
 add label "<small>This script demonstrates bidirectional communication with the dialogbox application using pipes." note
 set note stylesheet "qproperty-textInteractionFlags: NoTextInteraction;"
 add separator
-add groupbox horizontal
+add frame horizontal
 add checkbox "&Option 1" cb1
 add pushbutton "&Disable option 1" dsbl
-add groupbox horizontal
+add frame horizontal
 add stretch
 add pushbutton O&k okay apply exit
 add pushbutton &Cancel cancel exit
-end groupbox
+end frame
 set title "Demo 3"
 set okay default
 set cb1 focus

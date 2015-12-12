@@ -156,7 +156,7 @@ run_as_root()
 				add label "Installation process requires modifications in /usr/bin directory.<br>Please run it with root account!" msg
 				step vertical
 				add separator horizontal
-				add groupbox horizontal
+				add frame horizontal
 				add stretch
 				add pushbutton Ok okay exit
 
@@ -188,6 +188,7 @@ run_installation()
 		. icon-functions
 		icon_functions_init
 		find_apps_icon system-software-install
+		IFS=$'\n\r\t ' # restore default field separator
 	fi
 	: ${ICON:="/usr/share/pixmaps/debian-logo.png"}
 
@@ -197,7 +198,7 @@ run_installation()
 		add groupbox "Download and install the following packages:" lst vertical
 		step vertical
 		add separator horizontal
-		add groupbox horizontal
+		add frame horizontal
 		add stretch
 		add pushbutton Next next apply
 		add pushbutton Cancel cancel exit
@@ -321,7 +322,8 @@ EOINSTALL
 						set cancel default
 						set cancel focus
 EOINSTALL
-					exit $E_ERROR
+					EXIT_STATUS=$E_ERROR
+					return
 				fi
 			fi
 		done
@@ -389,6 +391,8 @@ main()
 	"<a href=\\\"https://github.com/martynets/xdg-bash-functions/\\\">Xdg-bash-functions package</a> is optional but highly recommended as it provides support for icon themes for shell scripts." \
 	)
 
+	EXIT_STATUS=$E_SUCCESS
+
 	check_dialogbox
 	run_as_root
 
@@ -405,5 +409,5 @@ main()
 	set +o monitor	# Disable SIGCHLD
 	wait $DBPID
 
-	exit $E_SUCCESS
+	exit $EXIT_STATUS
 }

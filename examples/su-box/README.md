@@ -1,5 +1,5 @@
 Copyright (C) 2015 Andriy Martynets [martynets@volia.ua](mailto:martynets@volia.ua)<br>
-See the end of the file for license conditions.
+See the end of the file for [license conditions](#license).
 
 -------------------------------------------------------------------------------
 
@@ -20,7 +20,9 @@ If the command is not provided it will be also asked for and the script looks si
 - the `su` utility (`login` package)
 - the `dialogbox` application (can be downloaded from [the dialogbox repository](https://github.com/martynets/dialogbox))
 - the `execpty` tool (can be downloaded from [the execpty repository](https://github.com/martynets/execpty))
-- optionally, the script uses [xdg-bash-functions package](https://github.com/martynets/xdg-bash-functions), if the last one present, for operations with your current icon theme.
+- optionally, the script uses [xdg-bash-functions package](https://github.com/martynets/xdg-bash-functions), if the last one present, for operations with current icon theme.
+
+This software is shipped with the `installer` script which is designed for Debian derivatives and is based on the "Debian package management system". In particular it uses tools from `dpkg` and `apt` packages. With minor manual alterations it can be adapted for other systems.
 
 #####Downloading
 This script is shipped as an example for [the dialogbox application](https://github.com/martynets/dialogbox/) and can be downloaded from its repository.
@@ -32,7 +34,7 @@ The `installer` script present in the current directory provides user friendly G
 
 All these tasks require root privilages. The installer tries to re-run itself with prompt for root password or asks user to run it with root account.
 
-> Note: the `installer` script must be run from the source tree as it uses some shared files. It is designed for Debian derivatives and needs minor adjustments for other systems.
+> Note: the `installer` script must be run from the source tree as it uses some shared files.
 
 To uninstall the script the above tasks must be undone manually.
 

@@ -90,6 +90,7 @@ then
 	. icon-functions
 	#ICON_SIZE=48
 	icon_functions_init
+	IFS=$'\n\r\t ' # restore default field separator
 else
 	find_apps_icon()
 	{
@@ -137,7 +138,11 @@ do
 	shift
 done
 
-[ "$USER" == "$(id -un)" ] && exec $COMMAND
+if [ -n "$COMMAND" ]
+then
+	[ "$USER" == "$(id -un)" ] && exec $COMMAND
+	[ -n "$USER" ] && [ "$(id -u)" == "0" ] && exec su $USER -c $COMMAND
+fi
 
 ICON=""
 if [ -n "$COMMAND" ]
@@ -147,6 +152,9 @@ else
 	find_actions_icon system-run || find_apps_icon system-users
 fi
 auth_icon=${ICON:-"/usr/share/pixmaps/debian-security.png"}
+IFS=$'\n\r\t ' # restore default field separator
+
+: ${USER:="root"}
 
 coproc dialogbox
 INPUTFD=${COPROC[0]}
@@ -160,7 +168,7 @@ cat >&$OUTPUTFD <<-EOUSER
 	add textbox "Password:" pswd password "$PASSWORD" "Enter the password"
 	step vertical
 	add separator horizontal
-	add groupbox horizontal
+	add frame horizontal
 	add stretch
 	add pushbutton Ok okay apply exit
 	add pushbutton Cancel cancel exit
@@ -186,6 +194,14 @@ then
 		disable usr
 		set pswd focus
 EOUSER
+	if [ "$(id -u)" == "0" ]
+	then
+		cat >&$OUTPUTFD <<-EOUSER
+			enable usr
+			disable pswd
+			set usr focus
+EOUSER
+	fi
 else
 	cat >&$OUTPUTFD <<-EOUSER
 		position usr
@@ -195,12 +211,7 @@ else
 		set cmd focus
 		set stylesheet "QLineEdit { min-width: 12em; };"
 EOUSER
-fi
-
-if [ -z "$USER" ]
-then
-	USER="root"
-	echo set usr text root >&$OUTPUTFD
+	[ "$(id -u)" == "0" ] && echo disable pswd >&$OUTPUTFD
 fi
 
 accepted=0

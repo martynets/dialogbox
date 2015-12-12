@@ -70,8 +70,8 @@ install_execpty()
 DEPENDENCIES=( "${DEPENDENCIES[@]}" \
 "su-box" \
 "true" \
-"https://github.com/martynets/dialogbox/examples/su-box/" \
-"<a href=\\\"https://github.com/martynets/dialogbox/examples/su-box/\\\">Su-box</a> is the target application." \
+"https://github.com/martynets/dialogbox/tree/master/examples/su-box/" \
+"<a href=\\\"https://github.com/martynets/dialogbox/tree/master/examples/su-box/\\\">Su-box</a> is the target application." \
 )
 
 check_su-box()

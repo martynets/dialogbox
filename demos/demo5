@@ -28,11 +28,11 @@ set note stylesheet "qproperty-textInteractionFlags: NoTextInteraction;"
 add separator
 add label "Click Next to start a long-run process" msg
 set msg stylesheet "min-width: 20em;"
-add groupbox horizontal
+add frame horizontal
 add stretch
 add pushbutton &Next okay
 add pushbutton &Cancel cancel exit
-end groupbox
+end frame
 set title "Demo 5"
 set okay default
 set okay focus

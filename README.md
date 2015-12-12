@@ -1,5 +1,5 @@
 Copyright (C) 2015 Andriy Martynets [martynets@volia.ua](mailto:martynets@volia.ua)<br>
-See the end of the file for license conditions.
+See the end of the file for [license conditions](#license).
 
 -------------------------------------------------------------------------------
 #####Сontents
@@ -86,7 +86,10 @@ Options recognized are the [standard Qt options](http://doc.qt.io/qt-4.8/qapplic
 #####Widgets
 Current version of the `dialogbox` supports the following widget types:
 - **pushbutton** (command button) - a control which can be clicked to initiate an action. It can have title (text), icon, can be checkable (pressed or depressed), can have `exit` and `apply` options described above. One of the pushbuttons within the dialog box can optionally be set as the default one. That means it is clicked once the end-user hits `Enter` key.<br>
-Pushbutton widgets are reported immediately as they are clicked with value of `clicked`.
+Pushbutton widgets are reported immediately as they are clicked with value of `clicked`. If the pushbutton is checkable its state is also reported together with the rest widgets as `1` if checked (pressed) and as `0` if unchecked (depressed).
+
+	>Tip: to have the state of the checkable pushbutton reported each time it is clicked set it with `apply` option. This will report values of all widgets including it.
+
 - **checkbox** (tick box) - a control which can be clicked to make it checked or unchecked. That indicates the option the control represents is either on or off. This control can have title (text) and optional icon.<br>
 Value of checkbox widget is reported as `1` if checked and as `0` if unchecked.
 
@@ -94,7 +97,7 @@ Value of checkbox widget is reported as `1` if checked and as `0` if unchecked.
 
 - **radiobutton** - a clickable control to select an option represented by it within group of similar controls that represent alternative options. These controls are used by groups to represent a selection of options when only one of them is possible at a time. As the previous control this one can have title (text) and optional icon.<br>
 Value of radiobutton widget is reported as `1` if it is the selected one and as `0` if it is not.
-- **groupbox** - a container control which provides visual separation and groupping of another widgets. It might have border or be flat depending on current theme. Optionally this control can have title (text) and can be checkable (has checkbox sub-control). All these options head the group of child widgets. If groupbox is checkable and is unchecked all child widgets are disabled. This type of widget hosts layout of either horizontal or vertical  type which manages sizing and positioning of child widgets. See [Layouts](#layouts) section below.<br>
+- **groupbox** - a container control which provides visual separation and groupping of another widgets. It might have border or be flat depending on current theme. Optionally this control can have title (text) and can be checkable (has checkbox sub-control). All these options head the group of child widgets. If groupbox is checkable and is unchecked all child widgets are disabled. Widgets of this type host layout of either horizontal or vertical type which manages sizing and positioning of child widgets. See [Layouts](#layouts) section below.<br>
 Value of groupbox widget is reported as `1` if it is checkable and is checked and as `0` otherwise.
 
 - **textbox** (line edit, edit field) - a one line text edit control. A widget of this type can have title, text, placeholder text and password options. The title is a text label in front to name the value edited. The text is the value edited itself. The placeholder is a hint text shown instead of empty text. The password option is a flag which instructs the control to hide the value entered showing asterisks instead of the characters.<br>
@@ -115,9 +118,13 @@ Reported value of textbox widget is the text entered by the end-user.
 	|XPM|X11 Pixmap|
 
 	The animation is also a file in either Animated GIF or Multiple-image Network Graphics (MNG) format.<br>
-Label widget alters its layout's alignment. For text label it is set to top-left which is the default alignment for layouts. For picture and animation labels alignment is set to centered in both directions. This could confuse if another widgets are added to the same layout. It is advised to keep picture and animation labels on separate layouts.<br>
+Label widget alters its parent layout alignment. Text label sets it to the default which depends on the type of the layout. Picture and animation labels set the alignment to centered in both directions. This could confuse if another widgets are added to the same layout. It is advised to keep picture and animation labels on separate layouts.<br>
+Label widgets also set their own alignment within the parent layout. The same, picture and animation labels are centered when text labels are aligned top-left which is the default for widgets.<br>
 Label widgets are not reported.
-- **separator** - a decorative control which forms a border to split the dialog box into logical areas. The control is a line of sunken shadow either horizontal or vertical orientation.<br>
+- **frame** - a container control which provides a rectangular area and similarly to groupbox widgets hosts layout of either horizontal or vertical type. The rectangular area can have different shape and be drawn by line of different type of shadow. The shape could be either box, panel or styled panel or could have no frame at all. The box shape draws line border around the content. The panel and styled panel are drawn as raised or sunken areas. The styled panel look depends on the current GUI style. The line could be either plain, raised or sunken shadow types. By default frame uses plain type of line and has no frame - draws nothing.<br>
+Frame widgets are not reported.
+
+- **separator** - a decorative control which forms a border to split the dialog box into logical areas. The control is a line either horizontal or vertical orientation. It could be either plain, raised or sunken shadow types. The latter is used by default.<br>
 Separator widgets are not reported.
 
 	>Note: separator widget is fully shrinkable and as the result a vertical separator has zero height on vertical layout if the latter contains more widgets. The same is true for length of horizontal separator on a horizontal layout with more widgets. To make them visible use them solely on a separate layouts of the same orientation or use vertical separators on horizontal layouts and horizontal separators on vertical layouts depending on design of the dialog box.
@@ -145,13 +152,13 @@ Widgets can be added, modified, styled, disabled, enabled and removed. See [Comm
 
 Some commands that modify existing widgets can be used without widget name specified. In this case they are addressed to the whole dialog box and affect either the main window or all widgets at once.
 
-Widgets can be styled using stylesheets. This technic allows to customize spacing, sizing, colors, background, fonts, images, etc. for widgets and their sub-controls. Stylesheets can be setup for a particular widget, group of widgets, class of widgets and all widgets including main window. See [Qt Style Sheet](http://doc.qt.io/qt-4.8/stylesheet-syntax.html) for more information.
+Widgets can be styled using stylesheets. This technic allows to customize spacing, sizing, colors, background, fonts, images, etc. for widgets and their sub-controls. Stylesheets can be setup for a particular widget, group of widgets, class of widgets and all widgets as a whole including main window. See [Qt Style Sheet](http://doc.qt.io/qt-4.8/stylesheet-syntax.html) for more information.
 
 Below screenshot demonstrates supported widget types:
 
 ![Widget types](./images/widget-types-demo.png)
 
->More widget types are scheduled for the release version of the `dialogbox` application.
+>More widget types are scheduled for the next version of the `dialogbox` application.
 
 #####Layouts
 Complex dialog box design is based on nested layouts structure. Layouts are responsible for positioning and sizing of their child objects. Horizontal layouts position their objects from left to right when vertical layouts from top to bottom. Combination of horizontal and vertical layouts allows to freely position and logically group any widgets to create desired dialog box.
@@ -166,7 +173,11 @@ The described above nested structure of layouts is created by two commands only:
 
 >Note: empty layout (contains nothing except spacer items) is removed automatically as soon as it losts focus (is no longer the current one).
 
-Some widgets (e.g. groupbox) can host own layout either vertical or horizontal. Adding such a widget makes its layout the current one and subsequent new widgets are added to it. The `end` command finishes this process and returns focus to the third level layout.
+Container widgets (groupbox, frame) can host own layout either vertical or horizontal. Adding such a widget makes its layout the current one and subsequent new widgets are added to it. The `end` command finishes this process and returns focus to the third level layout. Also the process is finished by commands that move the focus: `step` and `position`. Adding new container widget or positioning onto such one switches the process to the latter.
+
+Layouts are aligned within their parents in default way, which depends on the type of the parent layout. The exception is layouts which contain a picture or animation label. Such a widget changes the alignment to centered in both directions. Change of its type to text restores the default alignment.
+
+>Note: there are alignment of a layout within its parent layout, alignment of a widget within its hosting layout and alignment of a content within widget. Here the alignment of layouts is discussed.
 
 Below chart demonstrates example structure of layouts for a dialog:
 
@@ -179,11 +190,11 @@ add widget2
 step horizontal
 add widget3
 step vertical
-add groupbox widget4
+add frame widget4
 add stretch
 add widget5
 add widget6
-end groupbox
+end frame
 add widget7
 ```
 The alive example with the above structure might look the following:
@@ -199,30 +210,39 @@ Tokens are separated by whitespaces. If a token contains a white space character
 
 Tokens can be either keywords (reserved words) or custom strings. The latter are used to define widgets' name, title, text and auxiliary text depending on command. Keywords are used to define commands themselves, widget types and options available. Tokens are case sensitive and keywords are always lowercase. Using keywords in positions where custom strings are expected is ill-advised and may lead to unpredictable results.
 
-List of keywords reserved by current version of the `dialogbox` application:
+Below table lists keywords reserved by current version of the `dialogbox` application:
 
-|Commands|Controls|Options|Options|
-|--------|--------|-------|-------|
-|add|checkbox|animation|icon|
-|enable|groupbox|apply|iconsize|
-|end|label|behind|onto|
-|disable|pushbutton|checkable|password|
-|position|radiobutton|checked|picture|
-|remove|separator|default|placeholder|
-|set|space|enabled|stylesheet|
-|step|stretch|exit|text|
-|unset|textbox|focus|title|
-|||horizontal|vertical|
+|Commands|Controls   |Options   |Options    |
+|--------|-----------|----------|-----------|
+|add     |checkbox   |animation |noframe    |
+|enable  |frame      |apply     |onto       |
+|end     |groupbox   |behind    |panel      |
+|disable |label      |box       |password   |
+|position|pushbutton |checkable |picture    |
+|remove  |radiobutton|checked   |placeholder|
+|set     |separator  |default   |plain      |
+|step    |space      |enabled   |raised     |
+|unset   |stretch    |exit      |styled     |
+|        |textbox    |focus     |stylesheet |
+|        |           |horizontal|sunken     |
+|        |           |icon      |text       |
+|        |           |iconsize  |title      |
+|        |           |          |vertical   |
 
 >Note: for each command total size of all custom strings plus size of last token if it is a keyword should not exceed 1024 bytes. This includes terminating zeros for each of these tokens.
 
 ######Commands syntax and description:
 
-- **`add type [title] [name] [options] [text] [auxtext]`** - adds control of type `type` at current position. Normally current position is bottom of current layout (see `Layouts` section above). This can be changed by `position` command. The rest arguments of the command are optional and vary depending on the type of the control. For any type of widget, `name`, if provided, is an unique identifier for the added widget and is used to refer to it in subsequent commands as well as to report its value.
+- **`add type [title] [name] [options] [text] [auxtext]`** - adds a control of type `type` at current position. Normally current position is bottom of current layout (see `Layouts` section above). This can be changed by `position` command. The rest arguments of the command are optional and vary depending on the type of the control. For any type of widget, `name`, if provided, is an unique identifier for the added widget and is used to refer to it in subsequent commands as well as to report its value.
 	- `add checkbox [title] [name] [options]`<br>
 		`title` - text used on the checkbox widget.<br>
         `options` - optional `checked` keyword which makes the checkbox checked.
-	- `add groupbox [title] [name] [options]` - starts container widget. Subsequent `add` commands will add controls to this container. It is ended by either `end` or `step` or `add groupbox` or `position` commands.<br>
+	- `add frame [name] [options]` - starts container widget. Subsequent `add` commands will add controls to this container. It is ended by either `end`, `step`, `position` or `add <container widget>` commands.<br>
+        `options` - optional `vertical`, `horizontal`, `noframe`, `box`, `panel`, `styled`, `plain`, `raised` and `sunken` keywords which can be used in any combination and in any order. The first two keywords define the type of the layout hosted by the frame widget when horizontal is the default one. Next four keywords select the shape of the frame and the last three keywords select the line type used to draw the frame.
+
+		>Note: only one keyword for shape and for line type must be used. Otherwise the application will use one of those mentioned based on its internal algorithm.
+
+	- `add groupbox [title] [name] [options]` - starts container widget. Subsequent `add` commands will add controls to this container. It is ended by either `end`, `step`, `position` or `add <container widget>` commands.<br>
 		`title` - heading title for the groupbox. Its style and decoration as well as visibility and style of the groupbox border depend on current theme.<br>
         `options` - optional `vertical`, `horizontal`, `checkable` and `checked` keywords which can be used in any combination and in any order. The first two keywords define the type of the layout hosted by the groupbox widget when horizontal is the default one. `checkable` adds checkbox sub-control and `checked` makes it checked.
 
@@ -241,7 +261,7 @@ List of keywords reserved by current version of the `dialogbox` application:
 		`title` - text used on the radiobutton widget.<br>
         `options` - optional `checked` keyword which selects the radiobutton.
 	- `add separator [name] [options]`<br>
-        `options` - optional `vertical` or `horizontal` keyword which defines the orientation of the widget. By default it is oriented horizontally.<br>
+        `options` - optional `vertical` or `horizontal` and `plain`, `raised` or `sunken`keywords. The first two define the orientation of the widget. By default it is oriented horizontally. The rest three keywords define type of the line used to draw the separator. It defaults to sunken.<br>
 	- `add space [size]`<br>
 		`size` - string with value of integer type which is the size in pixels for this spacer item. If none mentioned `1` is assumed.<br>
 	- `add stretch`<br>
@@ -255,7 +275,7 @@ List of keywords reserved by current version of the `dialogbox` application:
 
 	>Note: enabling of previously disabled widget when its parent is also disabled will have no effect until the parent is enabled.
 
-- **`end [type]`** - ends current container widget (e.g. groupbox). All subsequent `add` commands will add widgets onto the current layout of level 3. Optional `type` can be mentioned for better reading.
+- **`end [type]`** - ends current container widget (groupbox, frame). All subsequent `add` commands will add widgets onto the current layout of level 3. Optional `type` can be mentioned for better reading.
 - **`disable [name]`** - disables the named widget or whole dialod box if `name` is omitted. Is a synonym to `unset [name] enabled` command.
 
 - **`position [options] name`** - moves focus for `add` command - changes current layout and/or position within it. The focus goes before the named widget. If the focus moves to a container widget (e.g. groupbox) the end of its hosting layout becames the focus point once the container is ended (`end`, `step`, `add groupbox` or `position` commands).<br>
@@ -268,6 +288,7 @@ List of keywords reserved by current version of the `dialogbox` application:
 Below is the list of possible keywords/options and their explanation:<br>
 	- `animation` - changes type of label widget to animation. `text` is used as the name of file with the content.
 	- `apply` - sets `apply` option for pushbutton widget.
+	- `box` - sets frame widget to box shape.
 	- `checkable` - makes groupbox or pushbutton widgets checkable.
 	- `checked` - makes checkable widget (checkbox, checkable groupbox or checkable pushbutton) checked or radiobutton selected.
 	- `default` - makes pushbutton widget the default one for the dialog box.
@@ -277,12 +298,17 @@ Below is the list of possible keywords/options and their explanation:<br>
 	- `icon` - sets icon for either widget or main window. `text` is used as the name of icon file. This option makes sense for checkbox, pushbutton and radiobutton widgets only.
 	- `iconsize` - sets a maximum size for icon in pixels. Uses `text` argument as an integer value to set. Default size is set by current theme. Smaller icons are not scaled.
 
-		>Note: this option can be set using stylesheets for a particular widget, class of widgets or all classes of widgets that support icons, e.g.:
+		>Note: this option can be set using stylesheets for a particular widget, class of widgets or all classes of widgets that support icons, e.g.:<br>
 		>`"QPushButton {icon-size:20px; }"`
 
+	- `noframe` - sets frame widget to have no frame - draws nothing.
+	- `panel` - sets frame widget to panel shape.
 	- `password` - sets the echo mode for textbox widget to password.
 	- `picture` - changes type of label widget to picture. `text` is used as the name of file with the content.
 	- `placeholder` - sets the value of the placeholder text for textbox widget. Uses `text` argument as the value to set.
+	- `plain` - sets frame or separator widget line type to plain - a solid line without any 3D effects.
+	- `raised` - sets frame or separator widget line type to raised - a 3D raised line.
+	- `styled` - sets frame widget to styled panel shape. Its look depends on current GUI style.
 	- `stylesheet`- sets stylesheet for either widget or whole dialod box. Uses `text` argument as the value to set. Stylesheet might contain styles for particular widget or for classes of widgets. If set for a container widget or for whole dialog box it might affect child widgets of a particular class. See [Qt Style Sheet](http://doc.qt.io/qt-4.8/stylesheet-syntax.html) for more information.
 
 		>Note: new stylesheet completely replaces previously set value regardless which styles are setup.
@@ -291,14 +317,16 @@ Below is the list of possible keywords/options and their explanation:<br>
 
 		|Widget type|Qt classname|
 		|-----------|------------|
-		|checkbox|QCheckBox|
-		|groupbox|QGroupBox|
-		|label|QLabel|
-		|pushbutton|QPushButton|
-		|radiobutton|QRadioButton|
-		|separator|QFrame|
-		|textbox|QLabel - stylesheets are applied only to the text label in front of the edit field|
+		|checkbox|`QCheckBox`|
+		|frame|`QFrame`|
+		|groupbox|`QGroupBox`|
+		|label|`QLabel`|
+		|pushbutton|`QPushButton`|
+		|radiobutton|`QRadioButton`|
+		|separator|`QFrame`|
+		|textbox|Widget name refers to `QLabel` object - the text label in front.<br> The edit field can be referred only as `QLineEdit` classname from a container widget or main window.|
 
+	- `sunken` - sets frame or separator widget line type to sunken - a 3D sunken line.
 	- `text` - sets the value of the text to edit for textbox widget. For all the rest types of widgets is a synonym to `title` option. It is more readable for label widgets rather than `title` as emphasizes change its type to text. Uses `text` argument as the value to set.
 	- `title` - changes the title of either widget or main window. For label widget changes its type to text. Uses `text` argument as the value to set.
 
@@ -306,14 +334,17 @@ Below is the list of possible keywords/options and their explanation:<br>
 - **`unset [name] options`** - unsets various options for the named widget or for the main window if `name` is omitted. This command is similar to the `set` one but is to reset flag-like options or value of parameters for a widget. Thus its list of applicable options excludes marker-like options (`focus` and `default`) as well as options for which reset of value makes no sense (`iconsize`).
 	- `animation` - changes type of label widget to animation with empty content.
 	- `apply` - turns off `apply` option for pushbutton widget.
+	- `box` - resets frame widget to have no frame - draws nothing. This is equal to `set [name] noframe`.
 	- `checkable` - makes groupbox or pushbutton widgets non-checkable.
 	- `checked` - makes checkable widget (checkbox, checkable groupbox or checkable pushbutton) unchecked or radiobutton unselected.
 	- `enabled` - disables the named widget or whole dialod box. Is equal to `disable` command.
 	- `exit` - turns off `exit` option for pushbutton widget.
 	- `icon` - unsets icon for either widget or main window.
+	- `panel` - resets frame widget to have no frame - draws nothing. This is equal to `set [name] noframe`.
 	- `password` - sets the echo mode for textbox widget to normal (characters entered are shown as they are).
 	- `picture` - changes type of label widget to picture with empty content.
 	- `placeholder` - resets the value of the placeholder text for textbox widget.
+	- `styled` - resets frame widget to have no frame - draws nothing. This is equal to `set [name] noframe`.
 	- `stylesheet`- resets stylesheet for either widget or whole dialod box.
 
 		>Note: this might affect child widgets if they were styled using class or name references.
@@ -332,11 +363,11 @@ The application is used to show a prompt using GUI widgets and the script analys
 ```shell
 dialogbox <<EODEMO
 add label "Please confirm the operation"
-add groupbox horizontal
+add frame horizontal
 add stretch
 add pushbutton C&ontinue apply exit
 add pushbutton C&ancel exit
-end groupbox
+end frame
 EODEMO
 
 if [ "$?" == "0" ]
@@ -385,11 +416,11 @@ done < <(
 dialogbox <<EODEMO
 add checkbox "&Option 1" cb1
 add textbox "&Text field" txt1 "text to edit"
-add groupbox horizontal
+add frame horizontal
 add stretch
 add pushbutton O&k okay apply exit
 add pushbutton &Cancel cancel exit
-end groupbox
+end frame
 set okay default
 set cb1 focus
 EODEMO
@@ -424,14 +455,14 @@ INPUTFD=${COPROC[0]}
 OUTPUTFD=${COPROC[1]}
 
 cat >&$OUTPUTFD <<EODEMO
-add groupbox horizontal
+add frame horizontal
 add checkbox "&Option 1" cb1
 add pushbutton "&Disable option 1" dsbl
-add groupbox horizontal
+add frame horizontal
 add stretch
 add pushbutton O&k okay apply exit
 add pushbutton &Cancel cancel exit
-end groupbox
+end frame
 set okay default
 set cb1 focus
 EODEMO
@@ -520,14 +551,14 @@ DBPID=$!			# PID of the dialogbox
 trap "kill $DBPID &>/dev/null; wait $DBPID; rm -rf \"$FIFOIN\" \"$FIFOOUT\"" EXIT
 
 cat >"$FIFOOUT" <<EODEMO
-add groupbox horizontal
+add frame horizontal
 add checkbox "&Option 1" cb1
 add pushbutton "&Disable option 1" dsbl
-add groupbox horizontal
+add frame horizontal
 add stretch
 add pushbutton O&k okay apply exit
 add pushbutton &Cancel cancel exit
-end groupbox
+end frame
 set okay default
 set cb1 focus
 EODEMO
@@ -608,11 +639,11 @@ set -o monitor	# Enable SIGCHLD
 
 cat >&$OUTPUTFD <<EODEMO
 add label "Click Next to start a long-run process" msg
-add groupbox horizontal
+add frame horizontal
 add stretch
 add pushbutton &Next okay
 add pushbutton &Cancel cancel exit
-end groupbox
+end frame
 set okay default
 set okay focus
 EODEMO
@@ -667,7 +698,7 @@ You can also use the online bug tracking system in the GitHub `dialogbox` projec
   https://github.com/martynets/dialogbox/issues
 
 #####Change Log
-0.8 Initial development, non-released version.
+0.9 Initial development, non-released version.
 
 #####License
 Copyright (C) 2015 Andriy Martynets [martynets@volia.ua](mailto:martynets@volia.ua)<br>

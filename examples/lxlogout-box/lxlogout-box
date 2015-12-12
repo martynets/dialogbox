@@ -119,16 +119,24 @@ then
 fi
 cancel_icon="$ICON"
 
-IFS=$' \t\n'
+IFS=$'\n\r\t ' # restore default field separator
 
 
 # =========================================================================================================
 # Form the prompt
 # =========================================================================================================
-message=${DESKTOP_SESSION-"LXDE"}
-type lsb_release &> /dev/null && message+=" "$(lsb_release -r -s)
+if [ -n "$_LXSESSION_PID" ]
+then
+	message=${DESKTOP_SESSION-"LXDE"}	# LXsession name
+else
+	message="X"							# non-LXsession environment
+fi
+
+#type lsb_release &> /dev/null && message+=" "$(lsb_release -r -s)
 message="Logout $message session ?"
 
+[ -r /usr/share/lxde/images/logout-banner.png ] && image="/usr/share/lxde/images/logout-banner.png"
+: ${image:="/usr/share/pixmaps/debian-logo.png"}
 
 # =========================================================================================================
 # Process response from the user
@@ -166,8 +174,10 @@ do
 done < <(
 
 dialogbox <<EOLOGOUT
-add label /usr/share/lxde/images/logout-banner.png picture
-add space 4 add separator
+add label "$image" picture
+add space 4
+add separator
+
 add label "$message" msg
 set msg stylesheet "qproperty-wordWrap: false;
 					qproperty-textInteractionFlags: NoTextInteraction;

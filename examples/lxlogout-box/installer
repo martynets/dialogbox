@@ -25,14 +25,14 @@
 DEPENDENCIES=( "${DEPENDENCIES[@]}" \
 "lxlogout-box" \
 "true" \
-"https://github.com/martynets/dialogbox/examples/lxlogout-box/" \
-"<a href=\\\"https://github.com/martynets/dialogbox/examples/lxlogout-box/\\\">Lxlogout-box</a> is the target application." \
+"https://github.com/martynets/dialogbox/tree/master/examples/lxlogout-box/" \
+"<a href=\\\"https://github.com/martynets/dialogbox/tree/master/examples/lxlogout-box/\\\">Lxlogout-box</a> is the target application." \
 )
 
 check_lxlogout-box()
 {
 	type lxlogout-box &>/dev/null || return 1
-	readlink /usr/bin/lxde-logout || return 1
+	[ ! -r /usr/bin/lxde-logout ] || readlink /usr/bin/lxde-logout || return 1
 	return 0
 }
 

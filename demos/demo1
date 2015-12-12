@@ -8,11 +8,11 @@ add label "<big>Please confirm the operation" msg
 set msg stylesheet "qproperty-wordWrap: false;
 					qproperty-textInteractionFlags: NoTextInteraction;"
 
-add groupbox horizontal
+add frame horizontal
 add stretch
 add pushbutton C&ontinue apply exit
 add pushbutton C&ancel exit
-end groupbox
+end frame
 set title "Demo 1"
 EODEMO
 
