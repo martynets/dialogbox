@@ -134,14 +134,18 @@ void DialogParser::process_token()
 		} commands_parser[]=
 		{
 			{"add", add, stage_type | stage_title | stage_name | stage_options | stage_text | stage_aux_text | stage_command},
-			{"enable", enable, stage_name | stage_command},
 			{"end", end, stage_type | stage_command},
-			{"disable", disable, stage_name | stage_command},
 			{"position", position, stage_options | stage_text | stage_command},
 			{"remove", remove, stage_name | stage_command},
-			{"set", set, stage_name | stage_options | stage_text | stage_command},
+			{"clear", clear, stage_name | stage_command},
 			{"step", step, stage_options | stage_command},
+			{"set", set, stage_name | stage_options | stage_text | stage_command},
 			{"unset", unset, stage_name | stage_options | stage_command},
+			{"enable", set | (option_enabled & option_mask), stage_name | stage_command},
+			{"disable", unset | (option_enabled & option_mask), stage_name | stage_command},
+			{"show", set | (option_visible & option_mask), stage_name | stage_command},
+			{"hide", unset | (option_visible & option_mask), stage_name | stage_command},
+			{"query", query, stage_command},
 			{"print", print, stage_command},
 			{NULL, 0, 0}
 		};
@@ -159,9 +163,14 @@ void DialogParser::process_token()
 			{"pushbutton", pushbutton},
 			{"radiobutton", radiobutton},
 			{"separator", separator},
-			{"space", space},
-			{"stretch", stretch},
 			{"textbox", textbox},
+			{"listbox", listbox},
+			{"dropdownlist", combobox},
+			{"combobox", combobox | (property_editable & property_mask)},
+			{"item", item},
+			{"progressbar", progressbar},
+			{"slider", slider},
+			{"textview", textview},
 			{NULL, 0}
 		};
 
@@ -188,11 +197,14 @@ void DialogParser::process_token()
 			{"apply", property_apply, false, false},
 			{"exit", property_exit, false, false},
 			{"default", property_default, false, false},
+			{"space", option_space, false, true},		// a kind of control without options
+			{"stretch", option_stretch, false, true},	// a kind of control without options
 			{"behind", option_behind, false, true},
 			{"onto", option_onto, false, true},
 			{"enabled", option_enabled, false, true},
 			{"focus", option_focus, false, true},
 			{"stylesheet", option_stylesheet, false, true},
+			{"visible", option_visible, false, true},
 			{"horizontal", option_vertical, true, true},
 			{"horizontal", property_vertical, true, false},
 			{"vertical", option_vertical, false, true},
@@ -204,6 +216,14 @@ void DialogParser::process_token()
 			{"box", property_box, false, false},
 			{"panel", property_panel, false, false},
 			{"styled", property_styled, false, false},
+			{"current", property_current, false, false},
+			{"activation", property_activation, false, false},
+			{"selection", property_selection, false, false},
+			{"minimum", property_minimum, false, false},
+			{"maximum", property_maximum, false, false},
+			{"value", property_value, false, false},
+			{"busy", property_busy, false, false},
+			{"file", property_file, false, false},
 			{NULL, 0, 0, 0}
 		};
 

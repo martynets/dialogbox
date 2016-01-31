@@ -57,12 +57,22 @@ int main(int argc, char *argv[])
 	QApplication::setApplicationName(PROGRAM_NAME);
 	QApplication::setApplicationVersion(VERSION);
     QApplication app(argc, argv);
-    DialogBox dialog(default_title,about_html_message);
-    DialogParser parser(&dialog);
+    bool resizable=false;
+    bool hidden=false;
 
 	// Consider QApplication has removed everything it recognized...
 	for(int i=1; i<argc; i++)
 		{
+			if(!strcmp(argv[i], "-r") || !strcmp(argv[i], "--resizable"))
+				{
+					resizable=true;
+					continue;
+				}
+			if(!strcmp(argv[i], "-d") || !strcmp(argv[i], "--hidden"))
+				{
+					hidden=true;
+					continue;
+				}
 			if(!strcmp(argv[i], "-h") || !strcmp(argv[i], "--help"))
 				{
 					help();
@@ -77,8 +87,15 @@ int main(int argc, char *argv[])
 			return(E_ARG);
 		}
 
+    DialogBox dialog(default_title,about_html_message, resizable);
+    DialogParser parser(&dialog);
+
 	parser.start();
-    return(dialog.exec());
+
+    dialog.setAttribute(Qt::WA_DeleteOnClose, false);
+    if(!hidden) dialog.show();
+
+    return(QCoreApplication::exec());
 }
 
 static void version()

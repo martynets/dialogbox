@@ -5,7 +5,7 @@ INCLUDEPATH += .
 
 # Input
 HEADERS += dialogbox.hpp
-SOURCES += dialogbox.cpp dialogparser.cpp dialogmain.cpp
+SOURCES += dialogbox.cpp dialogparser.cpp dialogmain.cpp dialogsetoptions.cpp dialogslots.cpp dialogprivate.cpp
 
 # install recipe options
 target.path = /usr/bin

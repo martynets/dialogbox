@@ -48,11 +48,11 @@ struct DialogCommand
 			step=				0x00000400,
 			set=				0x00000800,
 			unset=				0x00001000,
-			enable=				0x00002000,
-			disable=			0x00004000,
-			remove=				0x00008000,
-			position=			0x00010000,
-			print=				0x00020000,
+			remove=				0x00002000,
+			clear=				0x00004000,
+			position=			0x00008000,
+			query=				0x00010000,
+			print=				0x80000000,
 
 			// masks
 			option_mask=		0x0000000F, // property bits (4 properties max.)
@@ -62,47 +62,54 @@ struct DialogCommand
 			option_enabled=		set | unset | 0x00000001,
 			option_focus=		set | 0x00000002,
 			option_stylesheet=	set | unset | 0x00000004,
+			option_visible=		set | unset | 0x00000008,
 
 			// options specific to some commands (say, sub-commands)
 			option_vertical=	step | 0x00000001,
 			option_behind=		position | 0x00000001,
-			option_onto=		position | 0x00000002
+			option_onto=		position | 0x00000002,
+			option_space=		add | 0x00000001,
+			option_stretch=		add | 0x00000002
 		};
 	unsigned int command;
 
 	enum Controls
 		{
 			none=					0x00000000,
-			space=					0x80000000, // spacer item
-			stretch=				0x40000000, // spacer item
 
 			// widgets
-			dialog=					0x20000000,	// main window
-			frame=					0x10000000,
-			separator=				0x08000000,
-			label=					0x04000000,
-			groupbox=				0x02000000,
-			pushbutton=				0x01000000,
-			radiobutton=			0x00800000,
-			checkbox=				0x00400000,
-			textbox=				0x00200000,
+			dialog=					0x80000000,	// main window
+			frame=					0x40000000,
+			separator=				0x20000000,
+			label=					0x10000000,
+			groupbox=				0x08000000,
+			pushbutton=				0x04000000,
+			radiobutton=			0x02000000,
+			checkbox=				0x01000000,
+			textbox=				0x00800000,
+			listbox=				0x00400000,
+			combobox=				0x00200000,
+			item=					0x00100000,
+			progressbar=			0x00080000,
+			slider=					0x00040000,
+			textview=				0x00020000,
 
 			// masks
-			property_mask=			0x00000FFF, // property bits (12 properties max.)
-			widget_mask=			0x3FFFF000,	// all widgets listed above (18 types max.)
-			infwidget_mask=			widget_mask ^ dialog ^ frame ^ separator,
+			property_mask=			0x000001FF, // property bits (9 properties max.)
+			widget_mask=			0xFFFFFE00,	// all widgets listed above (23 types max.)
+			no_caption_widget_mask=	widget_mask ^ frame ^ separator ^ progressbar ^ slider ^ textview,
 
 			// properties specific for particular widget types
-			property_title=			dialog | infwidget_mask | 0x00000001,
-			property_text=			infwidget_mask | 0x00000002,
-			property_icon=			dialog | pushbutton | radiobutton | checkbox | 0x00000004,
+			property_title=			no_caption_widget_mask | 0x00000001,
+			property_text=			no_caption_widget_mask | 0x00000002,
+			property_icon=			dialog | item | pushbutton | radiobutton | checkbox | 0x00000004,
 			property_checked=		groupbox | pushbutton | radiobutton | checkbox | 0x00000008,
 			property_checkable=		groupbox | pushbutton | radiobutton | checkbox | 0x00000010,
-			property_iconsize=		pushbutton | radiobutton | checkbox | 0x00000020,
-			property_vertical=		groupbox | frame | separator | 0x00000080,
+			property_iconsize=		listbox | combobox | pushbutton | radiobutton | checkbox | 0x00000020,
+			property_vertical=		groupbox | frame | separator | progressbar | slider | 0x00000080,
 			property_apply=			pushbutton | 0x00000040,
 			property_exit=			pushbutton | 0x00000080,
-			property_default=		pushbutton | 0x00000100,	// !!! pushbutton exceeds 8 bit
+			property_default=		pushbutton | 0x00000100,	// !!! pushbutton exceeds 8 bits
 			property_password=		textbox | 0x00000004,
 			property_placeholder=	textbox | 0x00000008,
 			property_picture=		label | 0x00000004,
@@ -114,20 +121,17 @@ struct DialogCommand
 			property_box=			frame | 0x00000002,
 			property_panel=			frame | 0x00000004,
 			property_styled=		frame | 0x00000008,
+			property_current=		item | 0x00000008,
+			property_editable=		combobox | 0x00000004,
+			property_selection=		combobox | listbox | 0x00000008,
+			property_activation=	listbox | 0x00000004,
+			property_minimum=		progressbar | slider | 0x00000001,
+			property_maximum=		progressbar | slider | 0x00000002,
+			property_value=			progressbar | slider | 0x00000004,
+			property_busy=			progressbar | 0x00000008,
+			property_file=			textview | 0x00000004,
 		};
 	unsigned int control;
-
-	enum Stages
-		{
-			stage_command=		0x00000001,
-			stage_type=			0x00000002,
-			stage_title=		0x00000004,
-			stage_name=			0x00000008,
-			stage_text=			0x00000010,
-			stage_aux_text=		0x00000020,
-			stage_options=		0x00000040
-		};
-	unsigned int stage;
 
 	inline DialogCommand()
 		{
@@ -157,9 +161,6 @@ struct DialogCommand
 };
 
 
-// The function below returns type of the given widget as coded by the above enum
-DialogCommand::Controls WidgetType(QWidget*);
-
 void set_enabled(QWidget* widget, bool enable);
 QWidget* find_widget_recursively(QLayoutItem* item, const char* name);
 QLayout* find_layout_recursively(QLayout* layout, QWidget* widget);
@@ -170,21 +171,27 @@ class DialogBox : public QDialog
     Q_OBJECT
 
 public:
-    DialogBox(const char* title, const char* about=0, FILE* out=stdout);
+    DialogBox(const char* title, const char* about=NULL, bool resizable=false, FILE* out=stdout);
+
+    void ClearDialog();
 
 	enum Content { text, pixmap, movie };
 
     void AddPushbutton(const char* title, const char* name, bool apply=false, bool exit=false, bool def=false);
     void AddCheckbox(const char* title, const char* name, bool checked=false);
     void AddRadiobutton(const char* title, const char* name, bool checked=false);
-    void AddTextbox(const char* title, const char* name, const char* text=0, const char* placeholder=0, bool password=false);
-	void AddLabel(const char* title, const char* name=0, enum Content content=text);
+    void AddTextbox(const char* title, const char* name, const char* text=NULL, const char* placeholder=NULL, bool password=false);
+	void AddLabel(const char* title, const char* name=NULL, enum Content content=text);
+
     void AddGroupbox(const char* title, const char* name, bool vertical=true, bool checkable=false, bool checked=false);
     void AddFrame(const char* name, bool vertical=true, unsigned int style=0);
-    inline void EndGroup()
-		{
-			group_layout=0;
-		}
+    inline void EndGroup() { group_layout=0; }
+
+    void AddListbox(const char* title, const char* name, bool activation=false, bool selection=false);
+	void AddCombobox(const char* title, const char* name, bool editable=false, bool selection=false);
+	void ClearList(char* name);
+	void AddItem(const char* title, const char* icon=NULL, bool current=false);
+    inline void EndList() { current_view=0; }
 
     inline void AddStretch(int stretch=1)
 		{
@@ -198,28 +205,54 @@ public:
 			else current_layout->insertSpacing(current_index++,space);
 		}
 
-	void AddSeparator(const char* name=0, bool vertical=false, unsigned int style=0);
+	void AddSeparator(const char* name=NULL, bool vertical=false, unsigned int style=0);
+
+	void AddProgressbar(const char* name, bool vertical=false, bool busy=false);
+	void AddSlider(const char* name, bool vertical=false, int min=0, int max=100);
+	void AddTextview(const char* name, const char* file=NULL);
 
     void StepHorizontal();
     void StepVertical();
 
-    void RemoveWidget(const char* name);
-    void Position(const char* name, bool behind=false, bool onto=false);
+    void RemoveWidget(char* name);
+    void Position(char* name, bool behind=false, bool onto=false);
 
     void SetOptions(QWidget* widget, unsigned int options, unsigned int mask, const char* text);
 
+	void HideDefault();
+	void ShowDefault();
+
 public slots:
 	void ExecuteCommand(DialogCommand);
+	void done(int);
 
 private slots:
 	void report() { print_widgets_recursively(layout()); }
-	void pbclicked();
+	void PushbuttonClicked();
+	void PushbuttonToggled(bool);
+	void ListboxItemActivated(const QModelIndex&);
+	void ListboxItemSelected(QListWidgetItem*);
+	void ComboboxItemSelected(int);
+	void SliderValueChanged(int);
+	void SliderRangeChanged(int, int);
 
 private:
+	QPushButton* default_pb;
+
 	QBoxLayout* current_layout;
 	int current_index;
+
 	QBoxLayout* group_layout;
 	int group_index;
+
+	QAbstractItemView* current_view;	// the list items are added to
+	int view_index;
+	QWidget* current_list_widget;
+
+	QAbstractItemView* chosen_view;		// the list modifications are made on (set by the FindWidget)
+	int chosen_row;						// the list item modifications are made on
+	bool chosen_row_flag;				// flag that indicates the list item was set by the FindWidget
+	QWidget* chosen_list_widget;
 
 	FILE* output;
 
@@ -237,8 +270,10 @@ private:
 	void print_structure_recursively(QLayoutItem* item=0);
 
 public:
-	inline QWidget* FindWidget(const char* name) { return(find_widget_recursively(layout(), name)); }
+	QWidget* FindWidget(char* name);
 	inline QLayout* FindLayout(QWidget* widget) { return(find_layout_recursively(layout(), widget)); }
+
+	DialogCommand::Controls WidgetType(QWidget*);
 
 };
 
@@ -261,12 +296,49 @@ private:
 	DialogBox* dialog;
 	FILE* input;
 
+	enum Stages
+		{
+			stage_command=		0x00000001,
+			stage_type=			0x00000002,
+			stage_title=		0x00000004,
+			stage_name=			0x00000008,
+			stage_text=			0x00000010,
+			stage_aux_text=		0x00000020,
+			stage_options=		0x00000040
+		};
+	unsigned int stage;
+
 	size_t token;
 	size_t buffer_index;
 
 	void process_token();
 	void issue_command();
 
+};
+
+
+/*******************************************************************************
+ *	Below class is the work around QListWidget limitation:
+ * 		the widget reports current item as "activated" (emits the signal) on the
+ * 		Enter key press event but propagates this event to next widgets.
+ * 		The default/autodefault pushbutton might respond to it even by closing
+ * 		the dialog.
+ * ****************************************************************************/
+class Listbox : public QListWidget
+{
+
+    Q_OBJECT
+
+private:
+	bool activate_flag;
+
+public:
+	Listbox(): activate_flag(false) {};
+
+	void setActivateFlag(bool flag);
+	inline bool activateFlag() { return(activate_flag); };
+	void focusInEvent(QFocusEvent *event);
+	void focusOutEvent(QFocusEvent *event);
 };
 
 #endif
