@@ -1,7 +1,7 @@
 /*
- * GUI widgets for shell scripts - dialogbox version 0.9
+ * GUI widgets for shell scripts - dialogbox version 1.0
  *
- * Copyright (C) 2015 Andriy Martynets <martynets@volia.ua>
+ * Copyright (C) 2015, 2016 Andriy Martynets <martynets@volia.ua>
  *--------------------------------------------------------------------------------------------------------------
  * This file is part of dialogbox.
  *
@@ -18,7 +18,6 @@
  *--------------------------------------------------------------------------------------------------------------
  */
 
-#include <QApplication>
 #include "dialogbox.hpp"
 
 
@@ -30,6 +29,28 @@
 void DialogBox::done(int r)
 {
 	QCoreApplication::exit(r);
+}
+
+/*******************************************************************************
+ *	Slot function. Removes page widget from pages list.
+ * ****************************************************************************/
+void DialogBox::RemovePage(QObject* page)
+{
+	for(int i=0, j=pages.count(); i<j; i++)
+		if((QObject*)pages.at(i) == page)
+			{
+				pages.removeAt(i);
+				break;
+			}
+}
+
+/*******************************************************************************
+ *	Slot function. Reports values of all reportable enabled widgets.
+ * ****************************************************************************/
+void DialogBox::Report()
+{
+	for(int i=0, j=pages.count(); i<j; i++)
+		print_widgets_recursively(pages.at(i)->layout());
 }
 
 /*******************************************************************************
@@ -274,11 +295,17 @@ void DialogBox::ExecuteCommand(DialogCommand command)
 						case DialogCommand::textview:
 							AddTextview(command.GetTitle(), command.GetName());
 							break;
+						case DialogCommand::tabs:
+							AddTabs(command.GetTitle(), command.control);
+							break;
+						case DialogCommand::page:
+							AddPage(command.GetTitle(), command.GetName(), command.GetText(),
+							command.control & DialogCommand::property_current & DialogCommand::property_mask);
+							break;
 					}
 				break;
 			case DialogCommand::clear:
-				if(command.GetName()[0]) ClearList(command.GetName());
-				else ClearDialog();
+				Clear(command.GetName());
 				break;
 			case DialogCommand::end:
 				switch(command.control & ~DialogCommand::property_mask)
@@ -291,9 +318,20 @@ void DialogBox::ExecuteCommand(DialogCommand command)
 						case DialogCommand::combobox:
 							EndList();
 							break;
+						case DialogCommand::tabs:
+							EndTabs();
+							break;
+						case DialogCommand::page:
+							EndPage();
+							break;
 						case DialogCommand::widget_mask:	// none type mentioned
 							if(current_view) EndList();
-							else EndGroup();
+							else if(group_layout) EndGroup();
+							else if(current_tab_widget)
+								{
+									if(current_tab_widget->indexOf(current_layout->parentWidget())==-1) EndTabs();
+									else EndPage();
+								}
 							break;
 					}
 				break;
@@ -309,7 +347,7 @@ void DialogBox::ExecuteCommand(DialogCommand command)
 				else widget=this;
 
 				if(command.command & DialogCommand::option_enabled & DialogCommand::option_mask)
-					set_enabled(widget, true);
+					SetEnabled(widget, true);
 
 				if(command.command & DialogCommand::option_focus & DialogCommand::option_mask)
 					{
@@ -351,7 +389,7 @@ void DialogBox::ExecuteCommand(DialogCommand command)
 				else widget=this;
 
 				if(command.command & DialogCommand::option_enabled & DialogCommand::option_mask)
-					set_enabled(widget, false);
+					SetEnabled(widget, false);
 
 				// see http://doc.qt.io/qt-4.8/stylesheet.html for reference
 				if(command.command & DialogCommand::option_stylesheet & DialogCommand::option_mask)
@@ -371,7 +409,7 @@ void DialogBox::ExecuteCommand(DialogCommand command)
 							command.command & DialogCommand::option_onto & DialogCommand::option_mask);
 				break;
 			case DialogCommand::query:
-				report();
+				Report();
 				break;
 			case DialogCommand::print: // print command is temporary for debuging purposes
 				print_structure_recursively();

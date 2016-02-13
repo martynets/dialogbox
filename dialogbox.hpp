@@ -1,7 +1,7 @@
 /*
- * GUI widgets for shell scripts - dialogbox version 0.9
+ * GUI widgets for shell scripts - dialogbox version 1.0
  *
- * Copyright (C) 2015 Andriy Martynets <martynets@volia.ua>
+ * Copyright (C) 2015, 2016 Andriy Martynets <martynets@volia.ua>
  *--------------------------------------------------------------------------------------------------------------
  * This file is part of dialogbox.
  *
@@ -93,43 +93,49 @@ struct DialogCommand
 			progressbar=			0x00080000,
 			slider=					0x00040000,
 			textview=				0x00020000,
+			tabs=					0x00010000,
+			page=					0x00008000,
 
 			// masks
 			property_mask=			0x000001FF, // property bits (9 properties max.)
 			widget_mask=			0xFFFFFE00,	// all widgets listed above (23 types max.)
-			no_caption_widget_mask=	widget_mask ^ frame ^ separator ^ progressbar ^ slider ^ textview,
+			caption_widget_mask=	widget_mask ^ frame ^ separator ^ progressbar ^ slider ^ textview ^ tabs,
 
 			// properties specific for particular widget types
-			property_title=			no_caption_widget_mask | 0x00000001,
-			property_text=			no_caption_widget_mask | 0x00000002,
-			property_icon=			dialog | item | pushbutton | radiobutton | checkbox | 0x00000004,
-			property_checked=		groupbox | pushbutton | radiobutton | checkbox | 0x00000008,
-			property_checkable=		groupbox | pushbutton | radiobutton | checkbox | 0x00000010,
-			property_iconsize=		listbox | combobox | pushbutton | radiobutton | checkbox | 0x00000020,
-			property_vertical=		groupbox | frame | separator | progressbar | slider | 0x00000080,
-			property_apply=			pushbutton | 0x00000040,
-			property_exit=			pushbutton | 0x00000080,
-			property_default=		pushbutton | 0x00000100,	// !!! pushbutton exceeds 8 bits
-			property_password=		textbox | 0x00000004,
-			property_placeholder=	textbox | 0x00000008,
-			property_picture=		label | 0x00000004,
-			property_animation=		label | 0x00000008,
-			property_plain=			frame | separator | 0x00000010,
-			property_raised=		frame | separator | 0x00000020,
-			property_sunken=		frame | separator | 0x00000040,
-			property_noframe=		frame | 0x00000001,
-			property_box=			frame | 0x00000002,
-			property_panel=			frame | 0x00000004,
-			property_styled=		frame | 0x00000008,
-			property_current=		item | 0x00000008,
-			property_editable=		combobox | 0x00000004,
-			property_selection=		combobox | listbox | 0x00000008,
-			property_activation=	listbox | 0x00000004,
-			property_minimum=		progressbar | slider | 0x00000001,
-			property_maximum=		progressbar | slider | 0x00000002,
-			property_value=			progressbar | slider | 0x00000004,
-			property_busy=			progressbar | 0x00000008,
-			property_file=			textview | 0x00000004,
+			property_title=				caption_widget_mask | 0x00000001,
+			property_text=				caption_widget_mask | 0x00000002,
+			property_icon=				dialog | item | page | pushbutton | radiobutton | checkbox | 0x00000004,
+			property_checked=			groupbox | pushbutton | radiobutton | checkbox | 0x00000008,
+			property_checkable=			groupbox | pushbutton | radiobutton | checkbox | 0x00000010,
+			property_iconsize=			tabs | listbox | combobox | pushbutton | radiobutton | checkbox | 0x00000020,
+			property_vertical=			groupbox | frame | separator | progressbar | slider | 0x00000080,
+			property_apply=				pushbutton | 0x00000040,
+			property_exit=				pushbutton | 0x00000080,
+			property_default=			pushbutton | 0x00000100,	// !!! pushbutton exceeds 8 bits
+			property_password=			textbox | 0x00000004,
+			property_placeholder=		textbox | 0x00000008,
+			property_picture=			label | 0x00000004,
+			property_animation=			label | 0x00000008,
+			property_plain=				frame | separator | 0x00000010,
+			property_raised=			frame | separator | 0x00000020,
+			property_sunken=			frame | separator | 0x00000040,
+			property_noframe=			frame | 0x00000001,
+			property_box=				frame | 0x00000002,
+			property_panel=				frame | 0x00000004,
+			property_styled=			frame | 0x00000008,
+			property_current=			item | page | 0x00000008,
+			property_editable=			combobox | 0x00000004,
+			property_selection=			combobox | listbox | 0x00000008,
+			property_activation=		listbox | 0x00000004,
+			property_minimum=			progressbar | slider | 0x00000001,
+			property_maximum=			progressbar | slider | 0x00000002,
+			property_value=				progressbar | slider | 0x00000004,
+			property_busy=				progressbar | 0x00000008,
+			property_file=				textview | 0x00000004,
+			property_position_top=		tabs | 0x00000001,
+			property_position_bottom=	tabs | 0x00000002,
+			property_position_left=		tabs | 0x00000004,
+			property_position_right=	tabs | 0x00000008,
 		};
 	unsigned int control;
 
@@ -139,32 +145,11 @@ struct DialogCommand
 			title=name=text=auxtext=BUFFER_SIZE-1;
 		}
 
-	inline char* GetTitle()
-		{
-			return( buffer+title );
-		}
-
-	inline char* GetName()
-		{
-			return( buffer+name );
-		}
-
-	inline char* GetText()
-		{
-			return( buffer+text );
-		}
-
-	inline char* GetAuxText()
-		{
-			return( buffer+auxtext );
-		}
+	inline char* GetTitle()		{ return( buffer+title ); }
+	inline char* GetName()		{ return( buffer+name ); }
+	inline char* GetText()		{ return( buffer+text ); }
+	inline char* GetAuxText()	{ return( buffer+auxtext ); }
 };
-
-
-void set_enabled(QWidget* widget, bool enable);
-QWidget* find_widget_recursively(QLayoutItem* item, const char* name);
-QLayout* find_layout_recursively(QLayout* layout, QWidget* widget);
-
 
 class DialogBox : public QDialog
 {
@@ -172,8 +157,6 @@ class DialogBox : public QDialog
 
 public:
     DialogBox(const char* title, const char* about=NULL, bool resizable=false, FILE* out=stdout);
-
-    void ClearDialog();
 
 	enum Content { text, pixmap, movie };
 
@@ -185,13 +168,12 @@ public:
 
     void AddGroupbox(const char* title, const char* name, bool vertical=true, bool checkable=false, bool checked=false);
     void AddFrame(const char* name, bool vertical=true, unsigned int style=0);
-    inline void EndGroup() { group_layout=0; }
+    inline void EndGroup() { group_layout=NULL; }
 
     void AddListbox(const char* title, const char* name, bool activation=false, bool selection=false);
 	void AddCombobox(const char* title, const char* name, bool editable=false, bool selection=false);
-	void ClearList(char* name);
 	void AddItem(const char* title, const char* icon=NULL, bool current=false);
-    inline void EndList() { current_view=0; }
+    inline void EndList() { current_view=NULL; current_list_widget=NULL; }
 
     inline void AddStretch(int stretch=1)
 		{
@@ -211,23 +193,43 @@ public:
 	void AddSlider(const char* name, bool vertical=false, int min=0, int max=100);
 	void AddTextview(const char* name, const char* file=NULL);
 
+	void AddTabs(const char* name, unsigned int position=0);
+	void AddPage(const char* title, const char* name, const char* icon=NULL, bool current=false);
+	void EndPage();
+	void EndTabs();
+
     void StepHorizontal();
     void StepVertical();
+
+    void Clear(char* name);
+	void ClearChosenList();	// clears the list chosen by FindWidget()
+	void ClearTabs(QTabWidget*);
+	void ClearPage(QWidget*);
+    void ClearDialog();
 
     void RemoveWidget(char* name);
     void Position(char* name, bool behind=false, bool onto=false);
 
+	void SetEnabled(QWidget* widget, bool enable);
     void SetOptions(QWidget* widget, unsigned int options, unsigned int mask, const char* text);
+
+	QWidget* FindWidget(char* name);
+	QLayout* FindLayout(QWidget* widget);
+
+	bool IsLayoutOnPage(QWidget* page, QLayout* layout);
+	bool IsWidgetOnPage(QWidget* page, QWidget* widget);
+
+	DialogCommand::Controls WidgetType(QWidget*);
 
 	void HideDefault();
 	void ShowDefault();
 
 public slots:
 	void ExecuteCommand(DialogCommand);
+	void Report();
 	void done(int);
 
 private slots:
-	void report() { print_widgets_recursively(layout()); }
 	void PushbuttonClicked();
 	void PushbuttonToggled(bool);
 	void ListboxItemActivated(const QModelIndex&);
@@ -235,9 +237,12 @@ private slots:
 	void ComboboxItemSelected(int);
 	void SliderValueChanged(int);
 	void SliderRangeChanged(int, int);
+	void RemovePage(QObject*);
 
 private:
 	QPushButton* default_pb;
+
+	QList<QWidget*> pages;
 
 	QBoxLayout* current_layout;
 	int current_index;
@@ -254,26 +259,23 @@ private:
 	bool chosen_row_flag;				// flag that indicates the list item was set by the FindWidget
 	QWidget* chosen_list_widget;
 
+	QTabWidget* current_tab_widget;		// the pages are added to
+	int tab_index;
+
 	FILE* output;
 
 	bool empty;
 
-	void update_tab_order();
+	void update_tab_order(QWidget* page=NULL);
 	void sanitize_label(QWidget* label, enum Content content);
 
-	bool remove_if_empty(QLayout* layout);
-	bool is_empty(QLayout* layout);
-	void sanitize_layout(QLayout* layout);
+	bool remove_if_empty(QLayout*);
+	bool is_empty(QLayout*);
+	void sanitize_layout(QLayout*);
 
 	void print_widgets_recursively(QLayoutItem*);
 	void print_widget(QWidget*);
 	void print_structure_recursively(QLayoutItem* item=0);
-
-public:
-	QWidget* FindWidget(char* name);
-	inline QLayout* FindLayout(QWidget* widget) { return(find_layout_recursively(layout(), widget)); }
-
-	DialogCommand::Controls WidgetType(QWidget*);
 
 };
 
@@ -286,7 +288,7 @@ public:
 	DialogParser(DialogBox* parent=0, FILE* in=stdin);
 	~DialogParser();
 
-	void setParent(DialogBox* parent);
+	void SetParent(DialogBox* parent);
 	void run();
 
 signals:
@@ -316,7 +318,6 @@ private:
 
 };
 
-
 /*******************************************************************************
  *	Below class is the work around QListWidget limitation:
  * 		the widget reports current item as "activated" (emits the signal) on the
@@ -335,10 +336,16 @@ private:
 public:
 	Listbox(): activate_flag(false) {};
 
-	void setActivateFlag(bool flag);
-	inline bool activateFlag() { return(activate_flag); };
+	void SetActivateFlag(bool flag);
+	inline bool ActivateFlag() { return(activate_flag); };
 	void focusInEvent(QFocusEvent *event);
 	void focusOutEvent(QFocusEvent *event);
 };
+
+/*******************************************************************************
+ *	NON-CLASS MEMBERS
+ * ****************************************************************************/
+QWidget* find_widget_recursively(QLayoutItem* item, const char* name);
+QLayout* find_layout_recursively(QLayout* layout, QWidget* widget);
 
 #endif

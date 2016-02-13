@@ -1,7 +1,7 @@
 /*
- * GUI widgets for shell scripts - dialogbox version 0.9
+ * GUI widgets for shell scripts - dialogbox version 1.0
  *
- * Copyright (C) 2015 Andriy Martynets <martynets@volia.ua>
+ * Copyright (C) 2015, 2016 Andriy Martynets <martynets@volia.ua>
  *--------------------------------------------------------------------------------------------------------------
  * This file is part of dialogbox.
  *
@@ -18,7 +18,6 @@
  *--------------------------------------------------------------------------------------------------------------
  */
 
-#include <QApplication>
 #include "dialogbox.hpp"
 
 
@@ -31,10 +30,12 @@
 /*******************************************************************************
  *	update_tab_order sets widgets focus order in way they are shown on the
  * 	dialog, not they are created.
+ * 	It walks through the given or current (the current_layout is on) page only.
  * ****************************************************************************/
-void DialogBox::update_tab_order()
+void DialogBox::update_tab_order(QWidget* page)
 {
-	QBoxLayout* main_layout=(QBoxLayout*)layout();
+	//QBoxLayout* main_layout=(QBoxLayout*)(current_layout->parent()->parent());
+	QBoxLayout* main_layout=(QBoxLayout*)(page ? page->layout() : current_layout->parent()->parent());
 	QWidget* prev_widget=0;
 	QWidget* widget;
 
@@ -106,15 +107,17 @@ bool DialogBox::is_empty(QLayout* layout)
 /*******************************************************************************
  *	remove_if_empty removes branch of empty layouts from the tree.
  * 	It removes layout (with its downlinks) if it:
- * 		- has no widgets downstream
- * 		- is not the current one (this also prevents removing the last one)
+ * 		- has no widgets
  * 		- is not installed on a widget (groupbox in particular)
+ * 		- is not the current one
+ * 		- is not the last one
  * ****************************************************************************/
 bool DialogBox::remove_if_empty(QLayout* layout)
 {
 	QLayout* parent;
 
-	if(is_empty(layout) && (!(parent=(QLayout*)layout->parent())->isWidgetType()))
+	if(is_empty(layout) && (!(parent=(QLayout*)layout->parent())->isWidgetType())
+		&& (parent->count()>1 || (!parent->parent()->isWidgetType() && ((QLayout*)parent->parent())->count()>1)) )
 		{
 			if(!remove_if_empty(parent))
 				{
@@ -127,7 +130,9 @@ bool DialogBox::remove_if_empty(QLayout* layout)
 }
 
 /*******************************************************************************
- *	sanitize_layout prevents fantom layouts. Must be called for end layouts ONLY.
+ *	sanitize_layout prevents fantom layouts. Must be called for end layouts ONLY
+ * 	(3rd or 4th level). Actually for the 4th level layout it removes spacer
+ * 	items only.
  * ****************************************************************************/
 void DialogBox::sanitize_layout(QLayout* layout)
 {

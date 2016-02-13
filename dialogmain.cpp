@@ -1,7 +1,7 @@
 /*
- * GUI widgets for shell scripts - dialogbox version 0.9
+ * GUI widgets for shell scripts - dialogbox version 1.0
  *
- * Copyright (C) 2015 Andriy Martynets <martynets@volia.ua>
+ * Copyright (C) 2015, 2016 Andriy Martynets <martynets@volia.ua>
  *--------------------------------------------------------------------------------------------------------------
  * This file is part of dialogbox.
  *
@@ -18,8 +18,6 @@
  *--------------------------------------------------------------------------------------------------------------
  */
 
-#include <unistd.h>
-#include <QApplication>
 #include "dialogbox.hpp"
 
 /*	EXIT CODES */
@@ -27,11 +25,11 @@
 #define E_ARG		1
 
 #define PROGRAM_NAME "dialogbox"
-#define VERSION "0.9"
+#define VERSION "1.0"
 
 static const char* about_message=
 PROGRAM_NAME" v"VERSION"\n\
-Copyright (C) 2015 Andriy Martynets <martynets@volia.ua>\n\
+Copyright (C) 2015, 2016 Andriy Martynets <martynets@volia.ua>\n\
 License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.\n\
 This program comes with ABSOLUTELY NO WARRANTY.\n\
 This is free software, and you are welcome to redistribute it\n\
@@ -40,7 +38,7 @@ More information on <https://github.com/martynets/dialogbox/>.\n";
 
 static const char* about_html_message=
 "<h3>"PROGRAM_NAME" version "VERSION"</h3>\
-<p><b>Copyright (C) 2015 Andriy Martynets </b><a href=\"mailto:martynets@volia.ua\">martynets@volia.ua</a></p>\
+<p><b>Copyright (C) 2015, 2016 Andriy Martynets </b><a href=\"mailto:martynets@volia.ua\">martynets@volia.ua</a></p>\
 <p><b>License GPLv3+:</b> GNU GPL version 3 or later <a href=\"http://gnu.org/licenses/gpl.html\">http://gnu.org/licenses/gpl.html</a>.</p>\
 <p>This program comes with ABSOLUTELY NO WARRANTY. \
 This is free software, and you are welcome to redistribute it \
@@ -63,16 +61,6 @@ int main(int argc, char *argv[])
 	// Consider QApplication has removed everything it recognized...
 	for(int i=1; i<argc; i++)
 		{
-			if(!strcmp(argv[i], "-r") || !strcmp(argv[i], "--resizable"))
-				{
-					resizable=true;
-					continue;
-				}
-			if(!strcmp(argv[i], "-d") || !strcmp(argv[i], "--hidden"))
-				{
-					hidden=true;
-					continue;
-				}
 			if(!strcmp(argv[i], "-h") || !strcmp(argv[i], "--help"))
 				{
 					help();
@@ -82,6 +70,16 @@ int main(int argc, char *argv[])
 				{
 					version();
 					return(E_SUCCESS);
+				}
+			if(!strcmp(argv[i], "-r") || !strcmp(argv[i], "--resizable"))
+				{
+					resizable=true;
+					continue;
+				}
+			if(!strcmp(argv[i], "-d") || !strcmp(argv[i], "--hidden"))
+				{
+					hidden=true;
+					continue;
 				}
 			fprintf(stderr,"Error: Unrecognized option %s\n", argv[i]);
 			return(E_ARG);
@@ -106,29 +104,44 @@ static void version()
 static void help()
 {
 	const char* usage=
-"Usage:	"PROGRAM_NAME" [OPTION]\n\
+"Usage:	"PROGRAM_NAME" [options]\n\
 Translate commands on stdin into widgets of GUI dialogbox and output user\n\
 actions to stdout.\n\
 \n\
-Option could be:\n\
+In addition to standard Qt options the following ones are supported:\n\
 	-h, --help	display this help and exit\n\
 	-v, --version	output version information and exit\n\
+	-r, --resizable	make the dialog resizable\n\
+	-d, --hidden	don't show the dialog until explicit 'show' command\n\
 \n\
 Supported commands:\n\
 	- add type title [name] [options] [text] [auxtext]\n\
-	- end [type]\n\
-	- step [options]\n\
-	- set [name] options [text]\n\
-	- unset [name] options\n\
+	- clear [name]\n\
 	- enable [name]\n\
 	- disable [name]\n\
+	- show [name]\n\
+	- hide [name]\n\
+	- set [name] options [text]\n\
+	- unset [name] options\n\
+	- end [type]\n\
+	- step [options]\n\
+	- position name [options]\n\
 	- remove name\n\
-	- print\n\
-	- position options name (behind | onto)\n\
+	- query\n\
 Output format:\n\
 	- on pushbutton click:\n\
 		<pushbutton name>=clicked\n\
-	- additionally if apply option is set list all named widgets in format:\n\
+	- on toggle pushbutton click:\n\
+		<pushbutton name>=pressed | released\n\
+	- on slider move:\n\
+		<slider name>=<value>\n\
+	- on item selection in list box, drop-down list or combobox with\n\
+	  'selection' option set:\n\
+		<list widget name>=<value>\n\
+	- on item activation in list box with 'activation' option set:\n\
+		<list widget name>=<value>\n\
+	- on the dialog acceptance or 'query' command list all named reportable\n\
+	  widgets in format:\n\
 		<name>=<value>\n\
 \n\
 Full documentation at: <https://github.com/martynets/dialogbox/>\n";

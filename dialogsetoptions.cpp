@@ -1,7 +1,7 @@
 /*
- * GUI widgets for shell scripts - dialogbox version 0.9
+ * GUI widgets for shell scripts - dialogbox version 1.0
  *
- * Copyright (C) 2015 Andriy Martynets <martynets@volia.ua>
+ * Copyright (C) 2015, 2016 Andriy Martynets <martynets@volia.ua>
  *--------------------------------------------------------------------------------------------------------------
  * This file is part of dialogbox.
  *
@@ -18,7 +18,6 @@
  *--------------------------------------------------------------------------------------------------------------
  */
 
-#include <QApplication>
 #include "dialogbox.hpp"
 
 
@@ -74,6 +73,10 @@ void DialogBox::SetOptions(QWidget* widget, unsigned int options, unsigned int m
 		{
 			if((property=metaobj->property(metaobj->indexOfProperty("checkable"))).isWritable())
 				property.write(widget, QVariant(options & DialogCommand::property_checkable & DialogCommand::property_mask));
+			// changing checkable status for some widgets might change their focus policy to/from Qt::NoFocus (e.g. for QGroupBox)
+			QWidget* page=widget->parentWidget();
+			if(WidgetType(page)!=DialogCommand::page) page=page->parentWidget();
+			update_tab_order(page);
 		}
 
 	// password makes sense for QLineEdit objects only
@@ -122,21 +125,31 @@ void DialogBox::SetOptions(QWidget* widget, unsigned int options, unsigned int m
 	if(DialogCommand::property_title & type &&
 		mask & DialogCommand::property_title & DialogCommand::property_mask)
 		{
-			if(type==DialogCommand::item)
+			switch(type)
 				{
-					QAbstractItemModel* model=chosen_view->model();
-					if(chosen_row>=0)
-						model->setData(model->index(chosen_row,0), QString(options & DialogCommand::property_title & DialogCommand::property_mask ? text : NULL), Qt::DisplayRole);
+					case DialogCommand::item:
+						{
+							QAbstractItemModel* model=chosen_view->model();
+							if(chosen_row>=0)
+								model->setData(model->index(chosen_row,0), QString(options & DialogCommand::property_title & DialogCommand::property_mask ? text : NULL), Qt::DisplayRole);
+						}
+						break;
+					case DialogCommand::page:
+						{
+							QTabWidget* tabs=(QTabWidget*)widget->parent()->parent();
+							tabs->setTabText(tabs->indexOf(widget), QString(options & DialogCommand::property_title & DialogCommand::property_mask ? text : NULL));
+						}
+						break;
+					default:
+						if((property=metaobj->property(metaobj->indexOfProperty("title"))).isWritable() ||	// for QGroupBox objects
+							(property=metaobj->property(metaobj->indexOfProperty("text"))).isWritable() ||	// for the rest widgets
+							(property=metaobj->property(metaobj->indexOfProperty("windowTitle"))).isWritable())	// for the main window (QDialog object)
+								{
+									// avoid to format labels of coupled widgets (which have focusProxy set)
+									if(widget==proxywidget) sanitize_label(widget, DialogBox::text);
+									property.write(widget, QVariant(QString(options & DialogCommand::property_title & DialogCommand::property_mask ? text : NULL)));
+								}
 				}
-			else if((property=metaobj->property(metaobj->indexOfProperty("title"))).isWritable() ||	// for QGroupBox objects
-				(property=metaobj->property(metaobj->indexOfProperty("text"))).isWritable() ||	// for the rest widgets
-				(property=metaobj->property(metaobj->indexOfProperty("windowTitle"))).isWritable())	// for the main window (QDialog object)
-					{
-						// avoid to format labels of coupled widgets (which have focusProxy set)
-						if(widget==proxywidget) sanitize_label(widget, DialogBox::text);
-						property.write(widget, QVariant(QString(options & DialogCommand::property_title & DialogCommand::property_mask ? text : NULL)));
-
-					}
 		}
 
 	// animation makes sense for QLabel objects only
@@ -171,15 +184,26 @@ void DialogBox::SetOptions(QWidget* widget, unsigned int options, unsigned int m
 	if(DialogCommand::property_icon & type &&
 		mask & DialogCommand::property_icon & DialogCommand::property_mask)
 		{
-			if(type==DialogCommand::item)
+			switch(type)
 				{
-					QAbstractItemModel* model=chosen_view->model();
-					if(chosen_row>=0)
-						model->setData(model->index(chosen_row,0), QIcon(options & DialogCommand::property_icon & DialogCommand::property_mask ? text : NULL), Qt::DecorationRole);
+					case DialogCommand::item:
+						{
+							QAbstractItemModel* model=chosen_view->model();
+							if(chosen_row>=0)
+								model->setData(model->index(chosen_row,0), QIcon(options & DialogCommand::property_icon & DialogCommand::property_mask ? text : NULL), Qt::DecorationRole);
+						}
+						break;
+					case DialogCommand::page:
+						{
+							QTabWidget* tabs=(QTabWidget*)widget->parent()->parent();
+							tabs->setTabIcon(tabs->indexOf(widget), QIcon(options & DialogCommand::property_icon & DialogCommand::property_mask ? text : NULL));
+						}
+						break;
+					default:
+						if((property=metaobj->property(metaobj->indexOfProperty("icon"))).isWritable() ||
+							(property=metaobj->property(metaobj->indexOfProperty("windowIcon"))).isWritable())
+								property.write(widget, QVariant(QIcon(options & DialogCommand::property_icon & DialogCommand::property_mask ? text : NULL)));
 				}
-			else if((property=metaobj->property(metaobj->indexOfProperty("icon"))).isWritable() ||
-					(property=metaobj->property(metaobj->indexOfProperty("windowIcon"))).isWritable())
-						property.write(widget, QVariant(QIcon(options & DialogCommand::property_icon & DialogCommand::property_mask ? text : NULL)));
 		}
 
 	// iconsize makes sense for set command only
@@ -264,7 +288,7 @@ void DialogBox::SetOptions(QWidget* widget, unsigned int options, unsigned int m
 			unsigned int loptions=options & (property_apply | property_exit);
 			unsigned int lmask=mask & (property_apply | property_exit);
 
-			if(disconnect(widget, SIGNAL(clicked()), this, SLOT(report())))
+			if(disconnect(widget, SIGNAL(clicked()), this, SLOT(Report())))
 				{
 					pboptions|=property_apply;
 					if(disconnect(widget, SIGNAL(clicked()), this, SLOT(accept())))
@@ -279,7 +303,7 @@ void DialogBox::SetOptions(QWidget* widget, unsigned int options, unsigned int m
 
 			if(pboptions & property_apply)
 				{
-					connect(widget, SIGNAL(clicked()), this, SLOT(report()));
+					connect(widget, SIGNAL(clicked()), this, SLOT(Report()));
 					if(pboptions & property_exit)
 						connect(widget, SIGNAL(clicked()), this, SLOT(accept()));
 				}
@@ -291,11 +315,11 @@ void DialogBox::SetOptions(QWidget* widget, unsigned int options, unsigned int m
 		mask & DialogCommand::property_activation & DialogCommand::property_mask)
 		{
 			disconnect(proxywidget, SIGNAL(activated(const QModelIndex&)), this, SLOT(ListboxItemActivated(const QModelIndex&)));
-			((Listbox*)proxywidget)->setActivateFlag(false);
+			((Listbox*)proxywidget)->SetActivateFlag(false);
 			if(options & DialogCommand::property_activation & DialogCommand::property_mask)
 				{
 					connect(proxywidget, SIGNAL(activated(const QModelIndex&)), this, SLOT(ListboxItemActivated(const QModelIndex&)));
-					((Listbox*)proxywidget)->setActivateFlag(true);
+					((Listbox*)proxywidget)->SetActivateFlag(true);
 				}
 		}
 
@@ -324,12 +348,20 @@ void DialogBox::SetOptions(QWidget* widget, unsigned int options, unsigned int m
 		mask & DialogCommand::property_current & DialogCommand::property_mask &&
 		options & DialogCommand::property_current & DialogCommand::property_mask)
 		{
-			if(chosen_row>=0)
+			switch(type)
 				{
-					if(chosen_view != (Listbox*)chosen_list_widget)	// QComboBox widget
-						((QComboBox*)chosen_list_widget)->setCurrentIndex(chosen_row);
-					else	// Listbox widget
-						chosen_view->setCurrentIndex(chosen_view->model()->index(chosen_row,0));
+					case DialogCommand::item:
+						if(chosen_row>=0)
+							{
+								if(chosen_view != (Listbox*)chosen_list_widget)	// QComboBox widget
+									((QComboBox*)chosen_list_widget)->setCurrentIndex(chosen_row);
+								else	// Listbox widget
+									chosen_view->setCurrentIndex(chosen_view->model()->index(chosen_row,0));
+							}
+						break;
+					case DialogCommand::page:
+						((QTabWidget*)widget->parent()->parent())->setCurrentWidget(widget);
+						break;
 				}
 		}
 
@@ -358,7 +390,7 @@ void DialogBox::SetOptions(QWidget* widget, unsigned int options, unsigned int m
 					property.write(widget, QVariant(max));
 				}
 		}
-	// reset() for QProgressBar objects must be done in class specific way
+	// reset() for QProgressBar objects must be done in the class specific way
 	if(DialogCommand::property_value & type &&
 		mask & DialogCommand::property_value & DialogCommand::property_mask)
 		{
@@ -399,5 +431,38 @@ void DialogBox::SetOptions(QWidget* widget, unsigned int options, unsigned int m
 				}
 			else
 				((QTextEdit*)widget)->clear();
+		}
+
+	// below four position options make sense for set command only and for QTabWidget objects only
+	if(DialogCommand::property_position_top & type &&
+		mask & DialogCommand::property_position_top & DialogCommand::property_mask &&
+		options & DialogCommand::property_position_top & DialogCommand::property_mask)
+		{
+			if((property=metaobj->property(metaobj->indexOfProperty("tabPosition"))).isWritable())
+				property.write(widget, QVariant(QTabWidget::North));
+		}
+
+	if(DialogCommand::property_position_bottom & type &&
+		mask & DialogCommand::property_position_bottom & DialogCommand::property_mask &&
+		options & DialogCommand::property_position_bottom & DialogCommand::property_mask)
+		{
+			if((property=metaobj->property(metaobj->indexOfProperty("tabPosition"))).isWritable())
+				property.write(widget, QVariant(QTabWidget::South));
+		}
+
+	if(DialogCommand::property_position_left & type &&
+		mask & DialogCommand::property_position_left & DialogCommand::property_mask &&
+		options & DialogCommand::property_position_left & DialogCommand::property_mask)
+		{
+			if((property=metaobj->property(metaobj->indexOfProperty("tabPosition"))).isWritable())
+				property.write(widget, QVariant(QTabWidget::West));
+		}
+
+	if(DialogCommand::property_position_right & type &&
+		mask & DialogCommand::property_position_right & DialogCommand::property_mask &&
+		options & DialogCommand::property_position_right & DialogCommand::property_mask)
+		{
+			if((property=metaobj->property(metaobj->indexOfProperty("tabPosition"))).isWritable())
+				property.write(widget, QVariant(QTabWidget::East));
 		}
 }

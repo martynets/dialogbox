@@ -1,7 +1,7 @@
 /*
- * GUI widgets for shell scripts - dialogbox version 0.9
+ * GUI widgets for shell scripts - dialogbox version 1.0
  *
- * Copyright (C) 2015 Andriy Martynets <martynets@volia.ua>
+ * Copyright (C) 2015, 2016 Andriy Martynets <martynets@volia.ua>
  *--------------------------------------------------------------------------------------------------------------
  * This file is part of dialogbox.
  *
@@ -43,7 +43,7 @@ DialogParser::~DialogParser()
 	wait();
 }
 
-void DialogParser::setParent(DialogBox* parent)
+void DialogParser::SetParent(DialogBox* parent)
 {
 	if(dialog)
 		disconnect(this, SIGNAL(SendCommand(DialogCommand)),
@@ -111,17 +111,6 @@ void DialogParser::run()
 /*******************************************************************************
  *
  *	Analyses tokens and assembles commands of them.
- * 	Commands recognized are:
- * 		add type title [name] [options] [text] [auxtext]
- * 		end [type]
- * 		step [options]
- * 		set [name] options [text]
- * 		unset [name] options
- * 		enable [name]
- * 		disable [name]
- * 		remove name
- * 		print
- * 		position options name (behind | onto)
  *
  * ****************************************************************************/
 void DialogParser::process_token()
@@ -171,6 +160,8 @@ void DialogParser::process_token()
 			{"progressbar", progressbar},
 			{"slider", slider},
 			{"textview", textview},
+			{"tabs", tabs},
+			{"page", page},
 			{NULL, 0}
 		};
 
@@ -224,6 +215,10 @@ void DialogParser::process_token()
 			{"value", property_value, false, false},
 			{"busy", property_busy, false, false},
 			{"file", property_file, false, false},
+			{"top", property_position_top, false, false},
+			{"bottom", property_position_bottom, false, false},
+			{"left", property_position_left, false, false},
+			{"right", property_position_right, false, false},
 			{NULL, 0, 0, 0}
 		};
 

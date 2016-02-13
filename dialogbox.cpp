@@ -1,7 +1,7 @@
 /*
- * GUI widgets for shell scripts - dialogbox version 0.9
+ * GUI widgets for shell scripts - dialogbox version 1.0
  *
- * Copyright (C) 2015 Andriy Martynets <martynets@volia.ua>
+ * Copyright (C) 2015, 2016 Andriy Martynets <martynets@volia.ua>
  *--------------------------------------------------------------------------------------------------------------
  * This file is part of dialogbox.
  *
@@ -18,7 +18,6 @@
  *--------------------------------------------------------------------------------------------------------------
  */
 
-#include <QApplication>
 #include "dialogbox.hpp"
 
 static const char* about_label="_dbabout_";
@@ -36,6 +35,7 @@ DialogBox::DialogBox(const char* title, const char* about, bool resizable, FILE*
 										group_layout(NULL),
 										current_view(NULL),
 										current_list_widget(NULL),
+										current_tab_widget(NULL),
 										output(out),
 										empty(true)
 {
@@ -53,14 +53,19 @@ DialogBox::DialogBox(const char* title, const char* about, bool resizable, FILE*
 	mainLayout->setAlignment(LAYOUTS_ALIGNMENT);
 	current_layout->setAlignment(LAYOUTS_ALIGNMENT);
 
+	pages.append(this);
+
     setWindowTitle(title);
     if(about) AddLabel(about, about_label);
 }
-
+/*
 void DialogBox::ClearDialog()
 {
 	QLayout *layout0, *layout1, *layout2, *layout3;
 
+	while(pages.count()>1) delete pages.takeLast();
+
+	// below is equal to layout0=pages.at(0)->layout();
 	layout0=layout();	// main (vertical one)
 	for(int i=layout0->count()-1; i>=0; i--)
 		{
@@ -90,11 +95,14 @@ void DialogBox::ClearDialog()
 			if(i!=0) delete layout0->takeAt(i);
 		}
 
-	default_pb=NULL;
 	current_index=0;
-	EndGroup();
-	EndList();
+	default_pb=NULL;
+	group_layout=NULL;
+	current_view=NULL;
+	current_list_widget=NULL;
+	current_tab_widget=NULL;
 }
+*/
 
 /*******************************************************************************
  *
@@ -115,7 +123,7 @@ void DialogBox::AddPushbutton(const char* title, const char* name, bool apply, b
 	connect(pb, SIGNAL(toggled(bool)), this, SLOT(PushbuttonToggled(bool)));
     if(apply)
 		{
-			connect(pb, SIGNAL(clicked()), this, SLOT(report()));
+			connect(pb, SIGNAL(clicked()), this, SLOT(Report()));
 			if(exit) connect(pb, SIGNAL(clicked()), this, SLOT(accept()));
 		}
 	else if(exit) connect(pb, SIGNAL(clicked()), this, SLOT(reject()));
@@ -210,9 +218,10 @@ void DialogBox::AddFrame(const char* name, bool vertical, unsigned int style)
     frm->setObjectName(QString(name));
 
 	// style is a DialogCommand::Controls value
-	if(style & DialogCommand::frame)
+	style&=DialogCommand::property_mask;
+	style&=~DialogCommand::property_vertical;	// reset this bit instead of masking another 7 bits
+	if(style)
 		{
-			style&=DialogCommand::property_mask;
 			shape=style & DialogCommand::property_box ? QFrame::Box :
 					style & DialogCommand::property_panel ? QFrame::Panel :
 						style & DialogCommand::property_styled ? QFrame::StyledPanel : QFrame::NoFrame;
@@ -272,7 +281,7 @@ void DialogBox::AddListbox(const char* title, const char* name, bool activation,
     if(activation)
 		{
 			connect(list, SIGNAL(activated(const QModelIndex&)), this, SLOT(ListboxItemActivated(const QModelIndex&)));
-			list->setActivateFlag(true);
+			list->SetActivateFlag(true);
 		}
 
     if(selection)
@@ -313,16 +322,6 @@ void DialogBox::AddCombobox(const char* title, const char* name, bool editable, 
 		connect(list, SIGNAL(currentIndexChanged(int)), this, SLOT(ComboboxItemSelected(int)));
 
 	update_tab_order();
-}
-
-void DialogBox::ClearList(char* name)
-{
-	if(FindWidget(name) && chosen_view && !chosen_row_flag)
-		{
-			QAbstractItemModel* model=chosen_view->model();
-			if(model->removeRows(0,model->rowCount())) view_index=0;
-			else view_index=model->rowCount();
-		}
 }
 
 void DialogBox::AddItem(const char* title, const char* icon, bool current)
@@ -435,6 +434,122 @@ void DialogBox::AddTextview(const char* name, const char* file)
 	update_tab_order();
 }
 
+void DialogBox::AddTabs(const char* name, unsigned int position)
+{
+	QTabWidget* tabs=new QTabWidget;
+
+	tabs->setObjectName(QString(name));
+
+	position&=DialogCommand::property_mask;
+	position&=~DialogCommand::property_iconsize;	// reset this bit instead of masking another 4 bits
+	if(position)
+		tabs->setTabPosition(position & DialogCommand::property_position_top ? QTabWidget::North :
+								position & DialogCommand::property_position_bottom ? QTabWidget::South :
+								position & DialogCommand::property_position_left ? QTabWidget::West :
+								QTabWidget::East);
+
+	current_tab_widget=tabs;
+	tab_index=0;
+
+	if(group_layout) group_layout->insertWidget(group_index++,tabs);
+	else current_layout->insertWidget(current_index++,tabs);
+
+	update_tab_order();
+}
+
+void DialogBox::AddPage(const char* title, const char* name, const char* icon, bool current)
+{
+	if(current_tab_widget)
+		{
+			EndGroup();
+
+			QWidget* page=new QWidget;
+
+			page->setObjectName(QString(name));
+
+			QVBoxLayout* ml=new QVBoxLayout;
+			QHBoxLayout* hl=new QHBoxLayout;
+			current_layout=new QVBoxLayout;
+			current_index=0;
+
+			page->setLayout(ml);
+			ml->addLayout(hl);
+			hl->addLayout(current_layout);
+
+			ml->setSizeConstraint(QLayout::SetFixedSize);
+			ml->setAlignment(LAYOUTS_ALIGNMENT);
+			current_layout->setAlignment(LAYOUTS_ALIGNMENT);
+
+			pages.append(page);
+
+			connect(page, SIGNAL(destroyed(QObject*)), this, SLOT(RemovePage(QObject*)));
+
+			current_tab_widget->insertTab(tab_index, page, QIcon(icon), QString(title));
+			if(current)
+				current_tab_widget->setCurrentIndex(tab_index);
+			tab_index++;
+		}
+}
+
+void DialogBox::EndPage()
+{
+	QWidget* page=current_layout->parentWidget();
+
+	if(page != (QWidget*)this && current_tab_widget == page->parent()->parent())
+		{
+			QLayout* layout;
+			QObject* parent;
+
+			EndGroup();
+			layout=FindLayout(current_tab_widget);
+			parent=layout->parent();
+			if(parent->isWidgetType())
+				{
+					group_layout=(QBoxLayout*)layout;
+					group_index=layout->indexOf(current_tab_widget)+1;
+					current_layout=(QBoxLayout*)FindLayout((QWidget*)parent);
+					current_index=current_layout->indexOf((QWidget*)parent)+1;
+				}
+			else
+				{
+					current_layout=(QBoxLayout*)layout;
+					current_index=layout->indexOf(current_tab_widget)+1;
+				}
+		}
+}
+
+void DialogBox::EndTabs()
+{
+	EndPage();
+
+	QWidget* page=current_layout->parentWidget();
+
+	if(page != (QWidget*)this)
+		{
+			current_tab_widget=(QTabWidget*)page->parent()->parent();
+			tab_index=current_tab_widget->count();
+		}
+	else
+		current_tab_widget=NULL;
+}
+
+bool DialogBox::IsLayoutOnPage(QWidget* page, QLayout* layout)
+{
+	if(!layout) return false;
+	QObject* parent=layout->parent();
+	QWidget* parentWidget=parent->isWidgetType() ? ((QWidget*)parent)->parentWidget() : layout->parentWidget();
+
+	if(parentWidget==page) return true;
+	if(parentWidget==this) return false;
+	return IsLayoutOnPage(page, FindLayout((QWidget*)parentWidget->parent()->parent()));
+}
+
+bool DialogBox::IsWidgetOnPage(QWidget* page, QWidget* widget)
+{
+	if(!widget) return false;
+	return IsLayoutOnPage(page, FindLayout(widget));
+}
+
 static int indexOf(QLayout* layout)
 {
 	int i=-1, j;
@@ -446,16 +561,7 @@ static int indexOf(QLayout* layout)
 		}
 	return(i);
 }
-/*
-static int indexOf(QWidget* widget, QLayout* layout) // QLayout::indexOf(QWidget*) ???
-{
-	int i=-1, j;
 
-	for(i=0, j=layout->count(); i<j; i++)
-		if(layout->itemAt(i)->widget()==widget) return(i);
-	return(i);
-}
-*/
 void DialogBox::StepHorizontal()
 {
 	QBoxLayout* oldlayout=current_layout;
@@ -485,13 +591,143 @@ void DialogBox::StepVertical()
 	sanitize_layout(oldlayout);
 }
 
+void DialogBox::Clear(char* name)
+{
+	QWidget* widget;
+
+	if(name[0])
+		{
+			if( (widget=FindWidget(name)) )
+				{
+					switch((unsigned)WidgetType(widget))
+						{
+							case DialogCommand::listbox:
+							case DialogCommand::combobox:
+								ClearChosenList();
+								break;
+							case DialogCommand::page:
+								ClearPage(widget);
+								break;
+							case DialogCommand::tabs:
+								ClearTabs((QTabWidget*)widget);
+								break;
+						}
+				}
+		}
+	else ClearDialog();
+}
+
+void DialogBox::ClearChosenList()
+{
+	if(chosen_view && !chosen_row_flag)
+		{
+			QAbstractItemModel* model=chosen_view->model();
+			if(model->removeRows(0,model->rowCount())) view_index=0;
+			else view_index=model->rowCount();
+		}
+}
+
+void DialogBox::ClearTabs(QTabWidget* widget)
+{
+	for(int i=widget->count(); i>0; i--)
+		{
+			QWidget* page=widget->widget(i-1);
+
+			while(IsWidgetOnPage(page, current_tab_widget)) EndTabs();
+			if(IsWidgetOnPage(page, current_list_widget)) EndList();
+			if(IsWidgetOnPage(page, default_pb)) default_pb=NULL;
+
+			if(IsLayoutOnPage(page, current_layout))
+				{
+					EndGroup();
+					QLayout* layout=FindLayout(widget);
+					QObject* parent=layout->parent();
+					if(parent->isWidgetType())
+						{
+							group_layout=(QBoxLayout*)layout;
+							group_index=layout->indexOf(widget)+1;
+							current_layout=(QBoxLayout*)FindLayout((QWidget*)parent);
+							current_index=current_layout->indexOf((QWidget*)parent)+1;
+						}
+					else
+						{
+							current_layout=(QBoxLayout*)layout;
+							current_index=layout->indexOf(widget)+1;
+						}
+				}
+
+			delete page;
+		}
+}
+
+void DialogBox::ClearPage(QWidget* widget)
+{
+	QLayout *layout0, *layout1, *layout2, *layout3;
+	layout0=widget->layout();	// main (vertical one)
+
+	while(IsWidgetOnPage(widget, current_tab_widget)) EndTabs();
+	if(IsWidgetOnPage(widget, current_list_widget)) EndList();
+	if(IsWidgetOnPage(widget, default_pb)) default_pb=NULL;
+
+	if(IsLayoutOnPage(widget, current_layout))
+		{
+			EndGroup();
+			current_layout=(QBoxLayout*)layout0->itemAt(0)->layout()->itemAt(0)->layout();
+			current_index=0;
+		}
+
+	for(int i=layout0->count()-1; i>=0; i--)
+		{
+			layout1=layout0->itemAt(i)->layout();	// horizontal ones
+			for(int j=layout1->count()-1; j>=0; j--)
+				{
+					layout2=layout1->itemAt(j)->layout();	// vertical ones
+
+					QLayoutItem *li, *wi;
+					QWidget* w;
+					while( (li=layout2->takeAt(0)) )
+						{
+							if((layout3=li->layout()))	// coupled widgets' layout
+								{
+									while( (wi=layout3->takeAt(0)) )
+										{
+											if( (w=wi->widget()) ) delete w;	// QWidget isn't inherited by QWidgetItem and must be deleted separately
+											delete wi;
+										}
+								}
+							if( (w=li->widget()) ) delete w;	// Container widget owns installed layout and its widgets and deletes them
+							delete li;
+						}
+					if(i!=0 || j!=0) delete layout1->takeAt(j);
+					//else that is the last one layout made the current one (assigned to current_layout)
+				}
+			if(i!=0) delete layout0->takeAt(i);
+		}
+}
+
+void DialogBox::ClearDialog()
+{
+	default_pb=NULL;
+	current_view=NULL;
+	current_list_widget=NULL;
+	current_tab_widget=NULL;
+	group_layout=NULL;
+	current_layout=(QBoxLayout*)layout()->itemAt(0)->layout()->itemAt(0)->layout();
+	current_index=0;
+
+	while(pages.count()>1) delete pages.takeLast();
+
+	ClearPage(this);
+}
+
 void DialogBox::RemoveWidget(char* name)
 {
 	QWidget* widget;
 
 	if( (widget=FindWidget(name)) )
 		{
-			if(WidgetType(widget)==DialogCommand::item)
+			int type=WidgetType(widget);
+			if(type==DialogCommand::item)
 				{
 					if(chosen_row>=0)
 						{
@@ -502,12 +738,42 @@ void DialogBox::RemoveWidget(char* name)
 				}
 			else if(QLayout* layout=FindLayout(widget))
 				{
-					if(group_layout && widget->layout()==group_layout) EndGroup();	// for QGroupBox/QFrame objects
-					if(current_view && chosen_view==current_view) EndList();	// for lists of any type
-					if((QPushButton*)widget==default_pb) default_pb=NULL;	// reset default pushbutton
+					if(type==DialogCommand::tabs)
+						{
+							for(int i=0, j=((QTabWidget*)widget)->count(); i<j; i++)
+								{
+									QWidget* page=((QTabWidget*)widget)->widget(i);
 
-//					if(layout==group_layout && indexOf(widget, layout)<group_index) group_index--;
-//					if(layout==current_layout && indexOf(widget, layout)<current_index) current_index--;
+									while(IsWidgetOnPage(page, current_tab_widget)) EndTabs();
+									if(current_tab_widget==widget) EndTabs();
+									if(IsWidgetOnPage(page, current_list_widget)) EndList();
+									if(IsWidgetOnPage(page, default_pb)) default_pb=NULL;
+									if(IsLayoutOnPage(page, current_layout))	// position focus behind the parent QTabWidget
+										{
+											EndGroup();
+											QObject* parent=layout->parent();
+											if(parent->isWidgetType())
+												{
+													group_layout=(QBoxLayout*)layout;
+													group_index=layout->indexOf(widget);
+													current_layout=(QBoxLayout*)FindLayout((QWidget*)parent);
+													current_index=current_layout->indexOf((QWidget*)parent)+1;
+												}
+											else
+												{
+													current_layout=(QBoxLayout*)layout;
+													current_index=layout->indexOf(widget);
+												}
+										}
+								}
+						}
+					else
+						{
+							if(group_layout && widget->layout()==group_layout) EndGroup();	// for QGroupBox/QFrame objects
+							if(current_view && chosen_view==current_view) EndList();	// for lists of any type
+							if((QPushButton*)widget==default_pb) default_pb=NULL;	// reset default pushbutton
+						}
+
 					if(layout==group_layout && layout->indexOf(widget)<group_index) group_index--;
 					if(layout==current_layout && layout->indexOf(widget)<current_index) current_index--;
 
@@ -520,8 +786,38 @@ void DialogBox::RemoveWidget(char* name)
 					layout->removeWidget(widget);
 					delete widget;	// this also deletes child layouts and widgets
 									// (parented to parentWidget by addWidget and addLayout) and so forth
+									// for QTabWidget it deletes child pages which triggers RemovePage slot
 
 					sanitize_layout(layout);
+				}
+			else	// this is page
+				{
+					while(IsWidgetOnPage(widget, current_tab_widget)) EndTabs();
+					if(IsWidgetOnPage(widget, current_list_widget)) EndList();
+					if(IsWidgetOnPage(widget, default_pb)) default_pb=NULL;
+
+					if(IsLayoutOnPage(widget, current_layout))	// position focus behind the parent QTabWidget
+						{
+							EndGroup();
+
+							QWidget* tabs=(QWidget*)widget->parent()->parent();
+							layout=(QBoxLayout*)FindLayout(tabs);
+							QObject* parent=layout->parent();
+
+							if(parent->isWidgetType())
+								{
+									group_layout=(QBoxLayout*)layout;
+									group_index=layout->indexOf(tabs)+1;
+									current_layout=(QBoxLayout*)FindLayout((QWidget*)parent);
+									current_index=current_layout->indexOf((QWidget*)parent)+1;
+								}
+							else
+								{
+									current_layout=(QBoxLayout*)layout;
+									current_index=layout->indexOf(tabs)+1;
+								}
+						}
+					delete widget;
 				}
 		}
 }
@@ -530,76 +826,133 @@ void DialogBox::Position(char* name, bool behind, bool onto)
 {
 	QWidget* widget;
 	QBoxLayout* layout;
+	bool tabs_set=false;
 
-	if((widget=FindWidget(name)) && (layout=(QBoxLayout*)FindLayout(widget)))
+	if( (widget=FindWidget(name)) )
 		{
-			QObject* parent;
-			int index;
-			int type=WidgetType(widget);
-
-			if(widget->focusProxy())
+			if( !(layout=(QBoxLayout*)FindLayout(widget)) )	// this is page. widget!=this isn't tested as root page has no name
 				{
-					parent=layout->parent()->parent();
-					index=indexOf(layout);
-					layout=(QBoxLayout*)layout->parent();
-				}
-			else
-				{
-					parent=layout->parent();
-//					index=indexOf(widget, layout);
-					index=layout->indexOf(widget);
-				}
-
-			if(onto && type & (DialogCommand::listbox | DialogCommand::combobox))
-				{
-					current_view=chosen_view;
-					current_list_widget=chosen_list_widget;
-					view_index=current_view->model()->rowCount();
-				}
-			if(type & DialogCommand::item)
-				{
-					current_view=chosen_view;
-					current_list_widget=chosen_list_widget;
-					view_index= chosen_row>=0 ? chosen_row : current_view->model()->rowCount();
-					if(behind) view_index++, behind=false;
-				}
-			if(parent->isWidgetType())	// for widgets installed onto QGroupBox/QFrame
-				{
-					group_index=index;
-					if(behind) group_index++;
-
-					group_layout=layout;
-
-					if( (layout=(QBoxLayout*)FindLayout( widget=(QWidget*)parent )) )
+					current_tab_widget=(QTabWidget*)widget->parent()->parent();
+					tab_index=current_tab_widget->indexOf(widget);
+					if(behind) tab_index++, behind=false;
+					if(onto)
 						{
-//							current_index=indexOf(widget, layout)+1;
-							current_index=layout->indexOf(widget)+1;
-							current_layout=layout;
+							EndGroup();
+							layout=(QBoxLayout*)widget->layout();
+							layout=(QBoxLayout*)layout->itemAt(layout->count()-1)->layout();
+							current_layout=(QBoxLayout*)layout->itemAt(layout->count()-1)->layout();
+							current_index=current_layout->count();
+							return;
 						}
+					widget=current_tab_widget;
+					layout=(QBoxLayout*)FindLayout(widget);
+					tabs_set=true;
 				}
-			else
+
+			if(layout)
 				{
-					EndGroup();
-					current_index=index;
-					if(behind) current_index++;
+					QWidget* page;
+					QObject* parent;
+					int index;
+					int type=WidgetType(widget);
 
-					current_layout=layout;
-
-					if(onto && (layout=(QBoxLayout*)widget->layout()))	// position onto QGroupBox/QFrame object
+					if(widget->focusProxy() && !(type & DialogCommand::tabs))	// composit widget
 						{
+							parent=layout->parent()->parent();
+							index=indexOf(layout);
+							layout=(QBoxLayout*)layout->parent();
+						}
+					else
+						{
+							parent=layout->parent();
+							index=layout->indexOf(widget);
+						}
+
+					if(onto && type & (DialogCommand::listbox | DialogCommand::combobox))
+						{
+							current_view=chosen_view;
+							current_list_widget=chosen_list_widget;
+							view_index=current_view->model()->rowCount();
+						}
+					if(type & DialogCommand::item)
+						{
+							current_view=chosen_view;
+							current_list_widget=chosen_list_widget;
+							view_index= chosen_row>=0 ? chosen_row : current_view->model()->rowCount();
+							if(behind) view_index++, behind=false;
+						}
+
+					if(parent->isWidgetType())	// the widget is installed onto QGroupBox/QFrame
+						{
+							page=((QWidget*)parent)->parentWidget();
+
 							group_layout=layout;
-							group_index=layout->count();
+							group_index=index;
+							if(behind) group_index++;
+
+							if( (layout=(QBoxLayout*)FindLayout( (QWidget*)parent )) )
+								{
+									current_layout=layout;
+									current_index=layout->indexOf((QWidget*)parent)+1;
+								}
+						}
+					else
+						{
+							page=widget->parentWidget();
+							EndGroup();
+
+							current_layout=layout;
+							current_index=index;
+							if(behind) current_index++;
+
+							if(onto && (layout=(QBoxLayout*)widget->layout()))	// position onto QGroupBox/QFrame object
+								{
+									group_layout=layout;
+									group_index=layout->count();
+								}
+						}
+
+					if(!tabs_set)
+						{
+							if(onto && type & DialogCommand::tabs)
+								{
+									current_tab_widget=(QTabWidget*)widget;
+									tab_index=((QTabWidget*)widget)->count();
+								}
+							else
+								{
+									if(page==this) current_tab_widget=NULL;
+									else
+										{
+											current_tab_widget=(QTabWidget*)page->parent()->parent();
+											tab_index=current_tab_widget->indexOf(page);
+										}
+								}
 						}
 				}
 		}
 }
 
+void DialogBox::SetEnabled(QWidget* widget, bool enable)
+{
+	switch((unsigned)WidgetType(widget))
+		{
+			case DialogCommand::page:
+				{
+					QTabWidget* tabs=(QTabWidget*)widget->parent()->parent();
+					tabs->setTabEnabled(tabs->indexOf(widget), enable);
+				}
+				break;
+			default:
+				widget->setEnabled(enable);
+				if(QWidget* proxywidget=widget->focusProxy()) proxywidget->setEnabled(enable);
+		}
+}
+
 /*******************************************************************************
- *
  *	FindWidget searches for the widget with the given name. It does some analysis
  * 	of the name to recognize list item references (#number and :text) and sets
  * 	internal pointer to the QAbstractItemView and to that item.
- *
  * ****************************************************************************/
 QWidget* DialogBox::FindWidget(char* name)
 {
@@ -631,16 +984,23 @@ QWidget* DialogBox::FindWidget(char* name)
 							break;
 						}
 				}
-			widget=find_widget_recursively(layout(), name);
+
+			if(name[0])
+				for(int i=0, j=pages.count(); i<j; i++)
+					{
+						widget=pages.at(i);
+						if(!strcmp(widget->objectName().toLocal8Bit().constData(), name)) break; // the widget is page
+						if( (widget=find_widget_recursively(widget->layout(), name)) ) break;
+					}
+
 			switch((unsigned)WidgetType(widget))
 				{
 					case DialogCommand::listbox:
-						chosen_view=(Listbox*)widget->focusProxy();
-						chosen_list_widget=widget->focusProxy();
+						chosen_view=(Listbox*)(chosen_list_widget=widget->focusProxy());
 						break;
 					case DialogCommand::combobox:
-						chosen_view=((QComboBox*)widget->focusProxy())->view();
 						chosen_list_widget=widget->focusProxy();
+						chosen_view=((QComboBox*)chosen_list_widget)->view();
 						break;
 				}
 			if(chosen_view)
@@ -665,10 +1025,25 @@ QWidget* DialogBox::FindWidget(char* name)
 }
 
 /*******************************************************************************
- *
+ *	FindLayout searches for the layout the given widget is laid on.
+ * ****************************************************************************/
+QLayout* DialogBox::FindLayout(QWidget* widget)
+{
+	QLayout* layout=NULL;
+	QWidget* page;
+
+	for(int i=0, j=pages.count(); i<j; i++)
+		{
+			if( (page=pages.at(i)) == widget ) break; // the widget is page
+			if( (layout=find_layout_recursively(page->layout(), widget)) ) break;
+		}
+
+	return(layout);
+}
+
+/*******************************************************************************
  *	Duplicate of void QDialogPrivate::hideDefault() which is made private.
  * 	Is called by listbox widget with activation option set when it gets focus.
- *
  * ****************************************************************************/
 void DialogBox::HideDefault()
 {
@@ -677,12 +1052,10 @@ void DialogBox::HideDefault()
 }
 
 /*******************************************************************************
- *
  * 	Is called by listbox widget with activation option set when it loses focus.
  * 	Unfortunately QDialog keeps all properties/methods for default/autodefault
  * 	pushbuttons management private. Don't see a graceful way to restore default
  * 	indicator for an autodefault pushbutton...
- *
  * ****************************************************************************/
 void DialogBox::ShowDefault()
 {
@@ -700,13 +1073,9 @@ DialogCommand::Controls DialogBox::WidgetType(QWidget* widget)
 			const char* name=widget->metaObject()->className();
 
 			if(!strcmp(name, "DialogBox")) return(DialogCommand::dialog);
-			if(!strcmp(name, "QFrame"))
-				{
-					int shape=((QFrame *)widget)->frameStyle() & QFrame::Shape_Mask;
-
-					if(shape==QFrame::HLine || shape==QFrame::VLine) return(DialogCommand::separator);
-					return(DialogCommand::frame);
-				}
+			if(!strcmp(name, "QPushButton")) return(DialogCommand::pushbutton);
+			if(!strcmp(name, "QRadioButton")) return(DialogCommand::radiobutton);
+			if(!strcmp(name, "QCheckBox")) return(DialogCommand::checkbox);
 			if(!strcmp(name, "QLabel"))
 				{
 					if(QWidget* proxywidget=widget->focusProxy())
@@ -728,9 +1097,13 @@ DialogCommand::Controls DialogBox::WidgetType(QWidget* widget)
 					return(DialogCommand::label);
 				}
 			if(!strcmp(name, "QGroupBox")) return(DialogCommand::groupbox);
-			if(!strcmp(name, "QPushButton")) return(DialogCommand::pushbutton);
-			if(!strcmp(name, "QRadioButton")) return(DialogCommand::radiobutton);
-			if(!strcmp(name, "QCheckBox")) return(DialogCommand::checkbox);
+			if(!strcmp(name, "QFrame"))
+				{
+					int shape=((QFrame *)widget)->frameStyle() & QFrame::Shape_Mask;
+
+					if(shape==QFrame::HLine || shape==QFrame::VLine) return(DialogCommand::separator);
+					return(DialogCommand::frame);
+				}
 			if(!strcmp(name, "QLineEdit")) return(DialogCommand::textbox); // if the object queried directly
 			if(!strcmp(name, "Listbox")) // if the object queried directly
 				{
@@ -742,6 +1115,10 @@ DialogCommand::Controls DialogBox::WidgetType(QWidget* widget)
 					if(chosen_row_flag) return(DialogCommand::item);
 					return(DialogCommand::combobox);
 				}
+
+			if(!strcmp(name, "QTabWidget")) return(DialogCommand::tabs);
+			if(!strcmp(name, "QWidget")) return(DialogCommand::page);
+
 			if(!strcmp(name, "QProgressBar")) return(DialogCommand::progressbar);
 			if(!strcmp(name, "QSlider")) return(DialogCommand::slider);
 			if(!strcmp(name, "QTextEdit")) return(DialogCommand::textview);
@@ -752,15 +1129,50 @@ DialogCommand::Controls DialogBox::WidgetType(QWidget* widget)
 
 /*******************************************************************************
  *
- *	NON-CLASS MEMBER FUNCTIONS
+ * Listbox class is introduced to prevent Enter key hit
+ * propagation to default pushbutton when listbox activation option is on or
+ * combobox widget is editable. In other words to prevent two controls to
+ * respond to a single key.
  *
  * ****************************************************************************/
 
-void set_enabled(QWidget* widget, bool enable)
+void Listbox::focusInEvent(QFocusEvent* event)
 {
-	widget->setEnabled(enable);
-	if(QWidget* proxywidget=widget->focusProxy()) proxywidget->setEnabled(enable);
+	if(activate_flag)
+		{
+			DialogBox* dialog=(DialogBox*)window();
+			if(dialog) dialog->HideDefault();
+		}
+	QListWidget::focusInEvent(event);
 }
+
+void Listbox::focusOutEvent(QFocusEvent *event)
+{
+	if(activate_flag)
+		{
+			DialogBox* dialog=(DialogBox*)window();
+			if(dialog) dialog->ShowDefault();
+		}
+	QListWidget::focusOutEvent(event);
+}
+
+void Listbox::SetActivateFlag(bool flag)
+{
+	DialogBox* dialog;
+
+	if(activate_flag != flag && hasFocus() && (dialog=(DialogBox*)window()))
+		{
+			if(flag) dialog->HideDefault();
+			else dialog->ShowDefault();
+		}
+	activate_flag=flag;
+}
+
+/*******************************************************************************
+ *
+ *	NON-CLASS MEMBER FUNCTIONS
+ *
+ * ****************************************************************************/
 
 QWidget* find_widget_recursively(QLayoutItem* item, const char* name)
 {
@@ -799,45 +1211,4 @@ QLayout* find_layout_recursively(QLayout* layout, QWidget* widget)
 				}
 		}
 	return(NULL);
-}
-
-/*******************************************************************************
- *
- * Listbox class is introduced to prevent Enter key hit
- * propagation to default pushbutton when listbox activation option is on or
- * combobox widget is editable. In other words to prevent two controls to
- * respond to a single key.
- *
- * ****************************************************************************/
-
-void Listbox::focusInEvent(QFocusEvent* event)
-{
-	if(activate_flag)
-		{
-			DialogBox* dialog=(DialogBox*)window();
-			if(dialog) dialog->HideDefault();
-		}
-	QListWidget::focusInEvent(event);
-}
-
-void Listbox::focusOutEvent(QFocusEvent *event)
-{
-	if(activate_flag)
-		{
-			DialogBox* dialog=(DialogBox*)window();
-			if(dialog) dialog->ShowDefault();
-		}
-	QListWidget::focusOutEvent(event);
-}
-
-void Listbox::setActivateFlag(bool flag)
-{
-	DialogBox* dialog;
-
-	if(activate_flag != flag && hasFocus() && (dialog=(DialogBox*)window()))
-		{
-			if(flag) dialog->HideDefault();
-			else dialog->ShowDefault();
-		}
-	activate_flag=flag;
 }
