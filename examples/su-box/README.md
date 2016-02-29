@@ -1,16 +1,16 @@
-Copyright (C) 2015 Andriy Martynets [martynets@volia.ua](mailto:martynets@volia.ua)<br>
+Copyright (C) 2015, 2016 Andriy Martynets [martynets@volia.ua](mailto:martynets@volia.ua)<br>
 See the end of the file for [license conditions](#license).
 
 -------------------------------------------------------------------------------
 
 #####Introduction
-`su-box` is the `bash` script which implements a GUI frontend for `su` command. The main purpose for it is to run GUI application with different user credentials. But the script is also capable to run a console tool within current terminal if any.
+`su-box` is the `bash` script which implements a GUI frontend for `su` command. The main purpose for it is to run a GUI application with different user credentials. But the script is also capable to run a console tool within current terminal if any.
 The script is absolutely desktop agnostic and can be used on systems completely free from any GNOME, KDE, etc. stuff.
-If the target command is provided on command line the script asks only password for the requested user (root by default) and looks like the following depending on your current theme:
+If target command is provided on command line the script asks only password for the requested user (root by default) and its dialog looks similar to the following depending on your current theme:
 
 ![](../../images/su-box1.png)
 
-If the command is not provided it will be also asked for and the script looks similar to the following:
+If the command is not provided it will be also asked for and the script's dialog looks similar to the following:
 
 ![](../../images/su-box2.png)
 
@@ -47,13 +47,13 @@ su-box -v|--version
 ```
 The below options are recognized. The first unrecognized option starts the command to execute and its arguments.
 
-|Option|Action|
-|------|------|
-|-h, --help|display brief usage information and exit|
-|-v, --version|display version information and exit|
+|Option        |Action                                             |
+|--------------|---------------------------------------------------|
+|-h, --help    |display brief usage information and exit           |
+|-v, --version |display version information and exit               |
 |-t, --terminal|allow the command to interact with current terminal|
-|-u, --user|specify the USERNAME to run as (root by default)|
-|-c, --command|specify COMMAND and its arguments to run|
+|-u, --user    |specify the USERNAME to run as (root by default)   |
+|-c, --command |specify COMMAND and its arguments to run           |
 
 The main purpose of the `su-box` script is to run GUI applications or automated scripts which don't interact with a terminal. If, for some reason, there is a need to use it to run a program which inputs and/or outputs using current terminal the `--terminal` option can be used. This adds extra subshell and isn't the default behavior of the script.
 
@@ -61,7 +61,7 @@ The `--user` option defines the next argument as the desired username to run the
 
 The `--command` option starts the target command and list of its arguments as the rest of the command line. This option can be omitted as anything not recognized is treated as the target command.
 
-If the command to run is missed it is asked for in the dialog. The username is also available for editing in this case. Otherwise the password only is available for entering. See screenshots above.
+If the command to run is missed it is asked for in the dialog. The username is also available for editing in this case. Otherwise the password field is the only available for entering. See screenshots above.
 
 ######Values of exit status mean the following:
 - 0 - success (`--help` or `--version` only)
@@ -79,10 +79,13 @@ You can also use the online bug tracking system in the GitHub `dialogbox` projec
   https://github.com/martynets/dialogbox/issues
 
 #####Change Log
-1.0    Initial release
+|Publication Date|Version|Comments                                 |
+|----------------|-------|-----------------------------------------|
+|Feb 29, 2016    |1.1    |Command and user name fields made comboboxes populated from commands history and `/etc/passwd` files respectively|
+|Nov 28, 2015    |1.0    |Initial released version                 |
 
 #####License
-Copyright (C) 2015 Andriy Martynets [martynets@volia.ua](mailto:martynets@volia.ua)<br>
+Copyright (C) 2015, 2016 Andriy Martynets [martynets@volia.ua](mailto:martynets@volia.ua)<br>
 This file is part of `su-box`.
 
 `su-box` is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 3 of the License, or (at your option) any later version.

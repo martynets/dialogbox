@@ -1,9 +1,9 @@
 #!/bin/bash
 
 #
-# Su-box version 1.0
+# Su-box version 1.1
 #
-# Copyright (C) 2015 Andriy Martynets <martynets@volia.ua>
+# Copyright (C) 2015, 2016 Andriy Martynets <martynets@volia.ua>
 #--------------------------------------------------------------------------------------------------------------
 # This file is part of su-box.
 #
@@ -21,13 +21,26 @@
 #
 
 PROJECT_NAME="su-box"
-VERSION="1.0"
+VERSION="1.1"
 
 # Exit status:
 # 1	authentication failure (derived from su)
 E_SUCCESS=0
 E_ERROR=127
 E_CANCEL=128
+
+# /etc/passwd file filter criteria
+DAEMON_HOMEDIRS="bin:sbin:dev:etc:run:usr:var"
+NOLOGIN_SHELLS="nologin:false:true"
+
+# Commands cache file name
+COMMANDS_CACHE_FILE="$HOME/.cache/su-box.cache"
+
+# Cache file size (the number of commands to remember)
+CACHE_SIZE=10
+
+declare -a COMMANDS
+COMMANDS_INDEX=0
 
 if ! type dialogbox &> /dev/null
 then
@@ -67,7 +80,7 @@ Exit status:
 	- if the command is terminated by a signal - the signal number plus 128
 	- on success - exit status of the command executed
 
-More information on <https://github.com/martynets/dialogbox/examples/su-box/>.
+More information on <https://github.com/martynets/dialogbox/tree/master/examples/su-box/>.
 EOUSAGE
 }
 
@@ -75,20 +88,29 @@ version()
 {
 	cat << EOVERSION
 $PROJECT_NAME v$VERSION
-Copyright (C) 2015 Andriy Martynets <martynets@volia.ua>
+Copyright (C) 2015, 2016 Andriy Martynets <martynets@volia.ua>
 License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.
 This program comes with ABSOLUTELY NO WARRANTY.
 This is free software, and you are welcome to redistribute it
 under certain conditions. See the GNU GPL for details.
 
-More information on <https://github.com/martynets/dialogbox/examples/su-box/>.
+More information on <https://github.com/martynets/dialogbox/tree/master/examples/su-box/>.
 EOVERSION
 }
 
-if type icon-functions &> /dev/null
+if type icon-functions1 &> /dev/null
 then
 	. icon-functions
-	#ICON_SIZE=48
+	ICON_SIZE=24
+	icon_functions_init
+	ICON=""
+	find_actions_icon dialog-yes
+	ok_icon="$ICON"
+	ICON=""
+	find_actions_icon dialog-no
+	cancel_icon="$ICON"
+
+	ICON_SIZE=48
 	icon_functions_init
 	IFS=$'\n\r\t ' # restore default field separator
 else
@@ -141,7 +163,7 @@ done
 if [ -n "$COMMAND" ]
 then
 	[ "$USER" == "$(id -un)" ] && exec $COMMAND
-	[ -n "$USER" ] && [ "$(id -u)" == "0" ] && exec su $USER -c $COMMAND
+	[ -n "$USER" ] && [ "$(id -u)" == "0" ] && exec su $USER -c "$COMMAND"
 fi
 
 ICON=""
@@ -156,7 +178,7 @@ IFS=$'\n\r\t ' # restore default field separator
 
 : ${USER:="root"}
 
-coproc dialogbox
+coproc dialogbox --hidden
 INPUTFD=${COPROC[0]}
 OUTPUTFD=${COPROC[1]}
 DBPID=$COPROC_PID
@@ -164,25 +186,42 @@ DBPID=$COPROC_PID
 cat >&$OUTPUTFD <<-EOUSER
 	add label "$auth_icon" img picture
 	step horizontal
-	add textbox "User name:" usr "$USER" "Enter the username"
-	add textbox "Password:" pswd password "$PASSWORD" "Enter the password"
+	add combobox "&User name:" usr
+	add textbox "&Password:" pswd password "$PASSWORD" "Enter the password"
 	step vertical
 	add separator horizontal
 	add frame horizontal
 	add stretch
-	add pushbutton Ok okay apply exit
-	add pushbutton Cancel cancel exit
+	add pushbutton &Ok okay apply exit
+	add pushbutton C&ancel cancel exit
 
 	set icon "$auth_icon"
+	set okay icon "$ok_icon"
+	set cancel icon "$cancel_icon"
 
-	set usr stylesheet "min-width: 5em;"
-	set pswd stylesheet "min-width: 5em;"
+	set usr  stylesheet "QLabel {min-width: 5em;} QComboBox {min-width: 15em; max-width: 15em;}"
+	set pswd stylesheet "QLabel {min-width: 5em;} QLineEdit {min-width: 15em; max-width: 15em;}"
 
 	set img stylesheet "padding: 10px;"
 
 	set okay default
 
 EOUSER
+
+while IFS=$':' read username password userid groupid fullname homedir shell
+do
+	shell=${shell##*/}		# extract the shell name (truncate its path)
+	homedir=${homedir#/}
+	homedir=${homedir%%/*}	# extract the 1st level directory of the home directory
+	if [[ ! "$NOLOGIN_SHELLS" =~ (^|:)$shell(:|$) ]] && [[ ! "$DAEMON_HOMEDIRS" =~ (^|:)$homedir(:|$) ]]
+	then
+		echo add item $username >&$OUTPUTFD
+	fi
+done </etc/passwd
+
+echo set usr text $USER >&$OUTPUTFD
+
+use_cache=0
 
 if [ -n "$COMMAND" ]
 then
@@ -205,14 +244,35 @@ EOUSER
 else
 	cat >&$OUTPUTFD <<-EOUSER
 		position usr
-		add textbox "Command:" cmd "" "Enter the command to run"
+		#add textbox "Command:" cmd "" "Enter the command to run"
+		add combobox "&Command:" cmd
 		set title "Run as..."
-		set cmd stylesheet "min-width: 5em;"
+		set cmd stylesheet "QLabel {min-width: 5em;} QComboBox {min-width: 15em; max-width: 15em;}"
 		set cmd focus
-		set stylesheet "QLineEdit { min-width: 12em; };"
 EOUSER
-	[ "$(id -u)" == "0" ] && echo disable pswd >&$OUTPUTFD
+	[ "$(id -u)" == "0" ] && echo "disable pswd" >&$OUTPUTFD
+
+	use_cache=1
+	# load cache file
+	# Ensure the directory of the cache file exists
+	cachedir="${COMMANDS_CACHE_FILE%/*}"
+	[ ! -d "$cachedir" ] && mkdir -p "$cachedir"
+
+	if [ -r "$COMMANDS_CACHE_FILE" ]
+	then
+		IFS=$'\r\n'
+		COMMANDS=( $(<"$COMMANDS_CACHE_FILE") )
+		COMMANDS_INDEX=${#COMMANDS[*]}
+		for(( i=0; i<COMMANDS_INDEX; i++ ))
+		do
+			echo add item \"${COMMANDS[i]}\" >&$OUTPUTFD
+		done
+		IFS=$'\n\r\t ' # restore default value of internal field separator
+	fi
+
 fi
+
+echo "show" >&$OUTPUTFD
 
 accepted=0
 
@@ -238,9 +298,24 @@ wait $DBPID
 
 [ "$accepted" == "1" ] || exit $E_CANCEL
 
+# save cache file
+if [ "$use_cache" == "1" ] && [ -n "$COMMAND" ]
+then
+	echo ${COMMAND} >"$COMMANDS_CACHE_FILE"
+	j=1
+	for(( i=0; i<COMMANDS_INDEX && j<CACHE_SIZE; i++ ))
+	do
+		if [ "${COMMANDS[i]}" != "${COMMAND}" ]
+		then
+			echo ${COMMANDS[i]} >>"$COMMANDS_CACHE_FILE"
+			((j++))
+		fi
+	done
+fi
+
 if [ -z "$TERMINAL" ]
 then
-	echo $PASSWORD | execpty su $USER -c $COMMAND &>/dev/null
+	echo $PASSWORD | execpty su $USER -c "$COMMAND" &>/dev/null
 else
 	exec 3<&0
 	exec 4>&1

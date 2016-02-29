@@ -115,33 +115,33 @@ In addition to standard Qt options the following ones are supported:\n\
 	-d, --hidden	don't show the dialog until explicit 'show' command\n\
 \n\
 Supported commands:\n\
-	- add type title [name] [options] [text] [auxtext]\n\
+	- add type [title] [name] [options] [text] [auxtext]\n\
 	- clear [name]\n\
-	- enable [name]\n\
 	- disable [name]\n\
-	- show [name]\n\
-	- hide [name]\n\
-	- set [name] options [text]\n\
-	- unset [name] options\n\
+	- enable [name]\n\
 	- end [type]\n\
-	- step [options]\n\
-	- position name [options]\n\
-	- remove name\n\
+	- hide [name]\n\
+	- position [options] name\n\
 	- query\n\
+	- remove name\n\
+	- set [name] options [text]\n\
+	- show [name]\n\
+	- step [direction]\n\
+	- unset [name] options\n\
 Output format:\n\
-	- on pushbutton click:\n\
+	- on a pushbutton click:\n\
 		<pushbutton name>=clicked\n\
-	- on toggle pushbutton click:\n\
+	- on a toggle pushbutton click:\n\
 		<pushbutton name>=pressed | released\n\
-	- on slider move:\n\
+	- on a slider move:\n\
 		<slider name>=<value>\n\
-	- on item selection in list box, drop-down list or combobox with\n\
+	- on item selection in a list box, drop-down list or combobox with\n\
 	  'selection' option set:\n\
 		<list widget name>=<value>\n\
-	- on item activation in list box with 'activation' option set:\n\
+	- on item activation in a list box with 'activation' option set:\n\
 		<list widget name>=<value>\n\
-	- on the dialog acceptance or 'query' command list all named reportable\n\
-	  widgets in format:\n\
+	- on the dialog acceptance or 'query' command list all reportable\n\
+	  enabled named widgets in format:\n\
 		<name>=<value>\n\
 \n\
 Full documentation at: <https://github.com/martynets/dialogbox/>\n";

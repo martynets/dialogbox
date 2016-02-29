@@ -173,7 +173,7 @@ do
 	esac
 done < <(
 
-dialogbox <<EOLOGOUT
+dialogbox --hidden <<EOLOGOUT
 add label "$image" picture
 add space 4
 add separator
@@ -215,6 +215,8 @@ set icon "/usr/share/lxde/images/lxde-icon.png"
 set stylesheet "QPushButton {icon-size:18px; text-align:left; padding:3px; }"
 
 set cancel focus
+
+show
 
 EOLOGOUT
 

@@ -58,51 +58,6 @@ DialogBox::DialogBox(const char* title, const char* about, bool resizable, FILE*
     setWindowTitle(title);
     if(about) AddLabel(about, about_label);
 }
-/*
-void DialogBox::ClearDialog()
-{
-	QLayout *layout0, *layout1, *layout2, *layout3;
-
-	while(pages.count()>1) delete pages.takeLast();
-
-	// below is equal to layout0=pages.at(0)->layout();
-	layout0=layout();	// main (vertical one)
-	for(int i=layout0->count()-1; i>=0; i--)
-		{
-			layout1=layout0->itemAt(i)->layout();	// horizontal ones
-			for(int j=layout1->count()-1; j>=0; j--)
-				{
-					layout2=layout1->itemAt(j)->layout();	// vertical ones
-
-					QLayoutItem *li, *wi;
-					QWidget* w;
-					while( (li=layout2->takeAt(0)) )
-						{
-							if((layout3=li->layout()))	// coupled widgets' layout
-								{
-									while( (wi=layout3->takeAt(0)) )
-										{
-											if( (w=wi->widget()) ) delete w;	// QWidget isn't inherited by QWidgetItem and must be deleted separately
-											delete wi;
-										}
-								}
-							if( (w=li->widget()) ) delete w;	// Container widget owns installed layout and its widgets and deletes them
-							delete li;
-						}
-					if(i!=0 || j!=0) delete layout1->takeAt(j);
-					else current_layout=(QBoxLayout*)layout2;
-				}
-			if(i!=0) delete layout0->takeAt(i);
-		}
-
-	current_index=0;
-	default_pb=NULL;
-	group_layout=NULL;
-	current_view=NULL;
-	current_list_widget=NULL;
-	current_tab_widget=NULL;
-}
-*/
 
 /*******************************************************************************
  *
@@ -401,11 +356,12 @@ void DialogBox::AddSlider(const char* name, bool vertical, int min, int max)
 
 	slider->setObjectName(QString(name));
 	if(!vertical) slider->setOrientation(Qt::Horizontal);
-	slider->setRange(min, max);
 	slider->setTickPosition(QSlider::TicksAbove);
-	slider->setTracking(false);	// ???
+	slider->setTracking(false);
 	connect(slider, SIGNAL(valueChanged(int)), this, SLOT(SliderValueChanged(int)));
 	connect(slider, SIGNAL(rangeChanged(int,int)), this, SLOT(SliderRangeChanged(int,int)));
+
+	slider->setRange(min, max);
 
 	if(group_layout) group_layout->insertWidget(group_index++,slider);
 	else current_layout->insertWidget(current_index++,slider);
@@ -535,19 +491,42 @@ void DialogBox::EndTabs()
 
 bool DialogBox::IsLayoutOnPage(QWidget* page, QLayout* layout)
 {
-	if(!layout) return false;
+	if(!layout) return(false);
 	QObject* parent=layout->parent();
 	QWidget* parentWidget=parent->isWidgetType() ? ((QWidget*)parent)->parentWidget() : layout->parentWidget();
 
-	if(parentWidget==page) return true;
-	if(parentWidget==this) return false;
-	return IsLayoutOnPage(page, FindLayout((QWidget*)parentWidget->parent()->parent()));
+	if(parentWidget==page) return(true);
+	if(parentWidget==this) return(false);
+	return(IsLayoutOnPage(page, FindLayout((QWidget*)parentWidget->parent()->parent())));
 }
 
 bool DialogBox::IsWidgetOnPage(QWidget* page, QWidget* widget)
 {
-	if(!widget) return false;
-	return IsLayoutOnPage(page, FindLayout(widget));
+	if(!widget) return(false);
+	return(IsLayoutOnPage(page, FindLayout(widget)));
+}
+
+bool DialogBox::IsLayoutOnContainer(QWidget* container, QLayout* layout)
+{
+	if(!layout) return(false);
+	QObject* parent=layout->parent();
+	QWidget* page;
+
+	if(parent->isWidgetType())
+		{
+			if(parent==container) return(true);
+			page=((QWidget*)parent)->parentWidget();
+		}
+	else page=layout->parentWidget();
+
+	if(page==this) return(false);
+	return(IsLayoutOnContainer(container, FindLayout((QWidget*)page->parent()->parent())));
+}
+
+bool DialogBox::IsWidgetOnContainer(QWidget* container, QWidget* widget)
+{
+	if(!widget) return(false);
+	return(IsLayoutOnContainer(container, FindLayout(widget)));
 }
 
 static int indexOf(QLayout* layout)
@@ -687,7 +666,7 @@ void DialogBox::ClearPage(QWidget* widget)
 					QWidget* w;
 					while( (li=layout2->takeAt(0)) )
 						{
-							if((layout3=li->layout()))	// coupled widgets' layout
+							if((layout3=li->layout()))	// joint widgets' layout
 								{
 									while( (wi=layout3->takeAt(0)) )
 										{
@@ -727,6 +706,7 @@ void DialogBox::RemoveWidget(char* name)
 	if( (widget=FindWidget(name)) )
 		{
 			int type=WidgetType(widget);
+
 			if(type==DialogCommand::item)
 				{
 					if(chosen_row>=0)
@@ -738,46 +718,62 @@ void DialogBox::RemoveWidget(char* name)
 				}
 			else if(QLayout* layout=FindLayout(widget))
 				{
-					if(type==DialogCommand::tabs)
+					switch(type)
 						{
-							for(int i=0, j=((QTabWidget*)widget)->count(); i<j; i++)
-								{
-									QWidget* page=((QTabWidget*)widget)->widget(i);
+							case DialogCommand::tabs:
+								for(int i=0, j=((QTabWidget*)widget)->count(); i<j; i++)
+									{
+										QWidget* page=((QTabWidget*)widget)->widget(i);
 
-									while(IsWidgetOnPage(page, current_tab_widget)) EndTabs();
-									if(current_tab_widget==widget) EndTabs();
-									if(IsWidgetOnPage(page, current_list_widget)) EndList();
-									if(IsWidgetOnPage(page, default_pb)) default_pb=NULL;
-									if(IsLayoutOnPage(page, current_layout))	// position focus behind the parent QTabWidget
-										{
-											EndGroup();
-											QObject* parent=layout->parent();
-											if(parent->isWidgetType())
-												{
-													group_layout=(QBoxLayout*)layout;
-													group_index=layout->indexOf(widget);
-													current_layout=(QBoxLayout*)FindLayout((QWidget*)parent);
-													current_index=current_layout->indexOf((QWidget*)parent)+1;
-												}
-											else
-												{
-													current_layout=(QBoxLayout*)layout;
-													current_index=layout->indexOf(widget);
-												}
-										}
-								}
-						}
-					else
-						{
-							if(group_layout && widget->layout()==group_layout) EndGroup();	// for QGroupBox/QFrame objects
-							if(current_view && chosen_view==current_view) EndList();	// for lists of any type
-							if((QPushButton*)widget==default_pb) default_pb=NULL;	// reset default pushbutton
+										while(IsWidgetOnPage(page, current_tab_widget)) EndTabs();
+										if(current_tab_widget==widget) EndTabs();
+										if(IsWidgetOnPage(page, current_list_widget)) EndList();
+										if(IsWidgetOnPage(page, default_pb)) default_pb=NULL;
+										if(IsLayoutOnPage(page, current_layout))	// position focus behind the parent QTabWidget
+											{
+												EndGroup();
+												QObject* parent=layout->parent();
+												if(parent->isWidgetType())
+													{
+														group_layout=(QBoxLayout*)layout;
+														group_index=layout->indexOf(widget);
+														current_layout=(QBoxLayout*)FindLayout((QWidget*)parent);
+														current_index=current_layout->indexOf((QWidget*)parent)+1;
+													}
+												else
+													{
+														current_layout=(QBoxLayout*)layout;
+														current_index=layout->indexOf(widget);
+													}
+											}
+									}
+								break;
+							case DialogCommand::frame:
+							case DialogCommand::groupbox:
+								while(IsWidgetOnContainer(widget, current_tab_widget)) EndTabs();
+								if(IsWidgetOnContainer(widget, current_list_widget)) EndList();
+								if(IsWidgetOnContainer(widget, default_pb)) default_pb=NULL;
+								if(IsLayoutOnContainer(widget, current_layout))
+									{
+										EndGroup();
+										current_layout=(QBoxLayout*)layout;
+										current_index=layout->indexOf(widget);
+									}
+								if(group_layout && widget->layout()==group_layout) EndGroup();
+								break;
+							case DialogCommand::listbox:
+							case DialogCommand::combobox:
+								if(current_view && chosen_view==current_view) EndList();
+								break;
+							case DialogCommand::pushbutton:
+								if((QPushButton*)widget==default_pb) default_pb=NULL;
+								break;
 						}
 
 					if(layout==group_layout && layout->indexOf(widget)<group_index) group_index--;
 					if(layout==current_layout && layout->indexOf(widget)<current_index) current_index--;
 
-					if(QWidget* proxywidget=widget->focusProxy())		// for coupled widgets
+					if(QWidget* proxywidget=widget->focusProxy())		// for joint widgets
 						{
 							layout->removeWidget(proxywidget);
 							delete proxywidget;
@@ -856,7 +852,7 @@ void DialogBox::Position(char* name, bool behind, bool onto)
 					int index;
 					int type=WidgetType(widget);
 
-					if(widget->focusProxy() && !(type & DialogCommand::tabs))	// composit widget
+					if(widget->focusProxy() && !(type & DialogCommand::tabs))	// joint widget
 						{
 							parent=layout->parent()->parent();
 							index=indexOf(layout);

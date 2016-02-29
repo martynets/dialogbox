@@ -374,10 +374,17 @@ void DialogBox::ExecuteCommand(DialogCommand command)
 
 				// see http://doc.qt.io/qt-4.8/stylesheet.html for reference
 				if(command.command & DialogCommand::option_stylesheet & DialogCommand::option_mask)
-					widget->setStyleSheet(command.GetText());
+					{
+						widget->setStyleSheet(command.GetText());
+						if(QWidget* proxywidget=widget->focusProxy())
+							proxywidget->setStyleSheet(command.GetText());
+					}
 
 				if(command.command & DialogCommand::option_visible & DialogCommand::option_mask)
-					QTimer::singleShot(0, widget, SLOT(show()));	// calling slot from slot works not always
+					{
+						QTimer::singleShot(0, widget, SLOT(show()));	// calling slot from slot works not always
+						if(QWidget* proxywidget=widget->focusProxy()) QTimer::singleShot(0, proxywidget, SLOT(show()));
+					}
 
 				if(command.control) SetOptions(widget, command.control, command.control, command.GetText());
 				break;
@@ -393,10 +400,22 @@ void DialogBox::ExecuteCommand(DialogCommand command)
 
 				// see http://doc.qt.io/qt-4.8/stylesheet.html for reference
 				if(command.command & DialogCommand::option_stylesheet & DialogCommand::option_mask)
-					widget->setStyleSheet(NULL);
+					{
+						// rarely this fails (unset stylesheet or set it to empty string)
+						// could be the same reason: calling slot from slot but all tricks to avoid this e.g.
+						// QMetaObject::invokeMethod(widget, "setStyleSheet", Qt::QueuedConnection, Q_ARG(QString, ""));
+						// gave 0 results
+						// there must be some issue in style sheet subsystem
+						widget->setStyleSheet(QString());
+						if(QWidget* proxywidget=widget->focusProxy())
+							proxywidget->setStyleSheet(QString());
+					}
 
 				if(command.command & DialogCommand::option_visible & DialogCommand::option_mask)
-					QTimer::singleShot(0, widget, SLOT(hide()));	// calling slot from slot works not always
+					{
+						QTimer::singleShot(0, widget, SLOT(hide()));	// calling slot from slot works not always
+						if(QWidget* proxywidget=widget->focusProxy()) QTimer::singleShot(0, proxywidget, SLOT(hide()));
+					}
 
 				if(command.control) SetOptions(widget, 0, command.control, NULL);
 				break;
@@ -410,9 +429,6 @@ void DialogBox::ExecuteCommand(DialogCommand command)
 				break;
 			case DialogCommand::query:
 				Report();
-				break;
-			case DialogCommand::print: // print command is temporary for debuging purposes
-				print_structure_recursively();
 				break;
 			case DialogCommand::noop:
 			default:

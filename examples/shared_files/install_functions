@@ -150,7 +150,7 @@ run_as_root()
 
 		if type dialogbox &> /dev/null
 		then
-			dialogbox > /dev/null <<EOUSER
+			dialogbox --hidden > /dev/null <<EOUSER
 				add label ../../images/cross-mark.png img picture
 				step horizontal
 				add label "Installation process requires modifications in /usr/bin directory.<br>Please run it with root account!" msg
@@ -161,13 +161,15 @@ run_as_root()
 				add pushbutton Ok okay exit
 
 				set title "Root privilages required!"
-				set icon "/usr/share/lxde/images/lxde-icon.png"
+				set icon "/usr/share/pixmaps/debian-security.png"
 
 				set okay focus
 				set okay default
 
 				set msg stylesheet "min-width: 20em;"
 				set img stylesheet "padding: 10px;"
+
+				show
 
 EOUSER
 		else
@@ -239,7 +241,7 @@ EOINSTALL
 
 	if [ "$not_installed" == "1" ]
 	then
-
+		echo "show"
 		while IFS=$'=' read key value
 		do
 			case $key in
@@ -256,13 +258,12 @@ EOINSTALL
 
 		cat <<-EOINSTALL
 			remove next
-			set img picture ""
+			set img picture ../../images/go-mark.png
 			position lst
 			add label "" msg
 			set msg stylesheet "min-width: 20em;"
 			remove lst
-			add label ../../images/spinner.gif spinner animation
-			set spinner stylesheet "qproperty-alignment: AlignHCenter;"
+			add progressbar prog busy
 			set title "Installing..."
 EOINSTALL
 
@@ -308,7 +309,7 @@ EOINSTALL
 				if ! check_${DEPENDENCIES[i]}
 				then
 					cat <<-EOINSTALL
-						remove spinner
+						remove prog
 						set img picture ../../images/exclamation-mark.png
 						set msg text "<p>${DEPENDENCIES[i]} package is still missing.</p>
 							<p/>
@@ -329,7 +330,7 @@ EOINSTALL
 		done
 
 		cat <<-EOINSTALL
-			remove spinner
+			remove prog
 			set cancel title Ok
 			set cancel default
 			set cancel focus
@@ -351,6 +352,8 @@ EOINSTALL
 			set msg stylesheet "min-width: 20em;"
 			remove lst
 			set title "Installed!"
+
+			show
 EOINSTALL
 	fi
 
@@ -396,7 +399,7 @@ main()
 	check_dialogbox
 	run_as_root
 
-	coproc dialogbox
+	coproc dialogbox --hidden
 	exec <&${COPROC[0]}
 	exec >&${COPROC[1]}
 	DBPID=$COPROC_PID

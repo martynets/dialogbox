@@ -135,7 +135,6 @@ void DialogParser::process_token()
 			{"show", set | (option_visible & option_mask), stage_name | stage_command},
 			{"hide", unset | (option_visible & option_mask), stage_name | stage_command},
 			{"query", query, stage_command},
-			{"print", print, stage_command},
 			{NULL, 0, 0}
 		};
 

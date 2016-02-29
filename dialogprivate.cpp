@@ -34,7 +34,6 @@
  * ****************************************************************************/
 void DialogBox::update_tab_order(QWidget* page)
 {
-	//QBoxLayout* main_layout=(QBoxLayout*)(current_layout->parent()->parent());
 	QBoxLayout* main_layout=(QBoxLayout*)(page ? page->layout() : current_layout->parent()->parent());
 	QWidget* prev_widget=0;
 	QWidget* widget;
@@ -53,7 +52,7 @@ void DialogBox::update_tab_order(QWidget* page)
 
 							if( !(widget=li->widget()) )
 								if( (layout=li->layout()) )
-									widget=layout->itemAt(1)->widget(); // for coupled objects
+									widget=layout->itemAt(1)->widget(); // for joint objects
 
 							if(widget)
 								{
@@ -154,6 +153,7 @@ void DialogBox::sanitize_label(QWidget* label, enum Content content)
 			QLayout* layout;
 
 			if( (mv=((QLabel*)label)->movie()) ) delete mv;
+			((QLabel*)label)->clear();
 
 			if( (layout=FindLayout(label)) )
 				switch(content)
@@ -262,51 +262,3 @@ void DialogBox::print_widget(QWidget* widget)
 				}
 		}
 }
-
-/*******************************************************************************
- *	below function is temporary for debuging purposes, accessible via print command
- * ****************************************************************************/
-void DialogBox::print_structure_recursively(QLayoutItem* item)
-{
-	static int level;
-	const char* name;
-    QLayout* layout;
-	QWidget* widget;
-	QSpacerItem* space;
-
-	if(!item)
-		{
-			item=this->layout();
-			level=0;
-		}
-	else level++;
-
-	//print level spaces plus either objectName or className
-    if((layout=item->layout()))
-		{
-			name=layout->objectName().toLocal8Bit().constData();
-			if(!name[0]) name=layout->metaObject()->className();
-			fprintf(stderr, "%*.*s%s <%s>\n", level, level, "", name, is_empty(layout)?"empty":"not empty");
-			fflush(stderr);
-
-			for(int i=0, j=layout->count(); i<j; i++) print_structure_recursively(layout->itemAt(i));
-		}
-    else
-		if((widget=item->widget()))
-			{
-				name=widget->objectName().toLocal8Bit().constData();
-				if(!name[0]) name=widget->metaObject()->className();
-				fprintf(stderr, "%*.*s%s\n", level, level, "", name);
-				fflush(stderr);
-
-				if((layout=widget->layout())) print_structure_recursively(layout);
-			}
-		else
-			if((space=item->spacerItem()))
-				{
-					fprintf(stderr, "%*.*s%s\n", level, level, "", "spacer");
-					fflush(stderr);
-				}
-	level--;
-}
-

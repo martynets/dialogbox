@@ -145,7 +145,7 @@ void DialogBox::SetOptions(QWidget* widget, unsigned int options, unsigned int m
 							(property=metaobj->property(metaobj->indexOfProperty("text"))).isWritable() ||	// for the rest widgets
 							(property=metaobj->property(metaobj->indexOfProperty("windowTitle"))).isWritable())	// for the main window (QDialog object)
 								{
-									// avoid to format labels of coupled widgets (which have focusProxy set)
+									// avoid to format labels of joint widgets (which have focusProxy set)
 									if(widget==proxywidget) sanitize_label(widget, DialogBox::text);
 									property.write(widget, QVariant(QString(options & DialogCommand::property_title & DialogCommand::property_mask ? text : NULL)));
 								}
@@ -406,7 +406,6 @@ void DialogBox::SetOptions(QWidget* widget, unsigned int options, unsigned int m
 						{
 							int value(0);
 							if(text[0]) sscanf(text, "%d", &value);
-//							((QProgressBar*)widget)->setValue(value);
 							property.write(widget, QVariant(value));
 						}
 				}

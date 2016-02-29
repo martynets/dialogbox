@@ -211,13 +211,15 @@ public:
     void Position(char* name, bool behind=false, bool onto=false);
 
 	void SetEnabled(QWidget* widget, bool enable);
-    void SetOptions(QWidget* widget, unsigned int options, unsigned int mask, const char* text);
+	void SetOptions(QWidget* widget, unsigned int options, unsigned int mask, const char* text);
 
 	QWidget* FindWidget(char* name);
 	QLayout* FindLayout(QWidget* widget);
 
 	bool IsLayoutOnPage(QWidget* page, QLayout* layout);
 	bool IsWidgetOnPage(QWidget* page, QWidget* widget);
+	bool IsLayoutOnContainer(QWidget* container, QLayout* layout);
+	bool IsWidgetOnContainer(QWidget* container, QWidget* widget);
 
 	DialogCommand::Controls WidgetType(QWidget*);
 
@@ -275,8 +277,6 @@ private:
 
 	void print_widgets_recursively(QLayoutItem*);
 	void print_widget(QWidget*);
-	void print_structure_recursively(QLayoutItem* item=0);
-
 };
 
 class DialogParser : public QThread, private DialogCommand
