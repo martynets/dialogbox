@@ -98,7 +98,7 @@ More information on <https://github.com/martynets/dialogbox/tree/master/examples
 EOVERSION
 }
 
-if type icon-functions1 &> /dev/null
+if type icon-functions &> /dev/null
 then
 	. icon-functions
 	ICON_SIZE=24
