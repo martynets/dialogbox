@@ -85,7 +85,7 @@ int main(int argc, char *argv[])
 			return(E_ARG);
 		}
 
-    DialogBox dialog(default_title,about_html_message, resizable);
+    DialogBox dialog(default_title, about_html_message, resizable);
     DialogParser parser(&dialog);
 
 	parser.start();

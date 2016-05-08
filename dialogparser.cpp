@@ -31,15 +31,17 @@ DialogParser::DialogParser(DialogBox* parent, FILE* in) :
 	token=buffer_index=0;
 
 	qRegisterMetaType<DialogCommand>("DialogCommand");
+	// Qt::BlockingQueuedConnection type is used to ensure commands are executed sequentially
+	// This avoids races e.g. show hide show sequence in v1.0
 	if(parent)
 		connect(this, SIGNAL(SendCommand(DialogCommand)),
-			parent, SLOT(ExecuteCommand(DialogCommand)));
+			parent, SLOT(ExecuteCommand(DialogCommand)), Qt::BlockingQueuedConnection);
 }
 
 DialogParser::~DialogParser()
 {
 	terminate();	// we cannot gracefully terminate this thread as input
-					//from stdin may be blocking when attached to a terminal
+					// from stdin may be blocking when attached to a terminal
 	wait();
 }
 
@@ -53,7 +55,7 @@ void DialogParser::SetParent(DialogBox* parent)
 	QObject::setParent(parent);
 	if(parent)
 		connect(this, SIGNAL(SendCommand(DialogCommand)),
-			parent, SLOT(ExecuteCommand(DialogCommand)));
+			parent, SLOT(ExecuteCommand(DialogCommand)), Qt::BlockingQueuedConnection);
 }
 
 void DialogParser::run()

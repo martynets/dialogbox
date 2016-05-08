@@ -140,7 +140,7 @@ run_as_root()
 	if [ "$(id --user)" != "0" ]
 	then
 
-		type su-box &> /dev/null && exec su-box "$0"
+		type su-box &> /dev/null && exec su-box --terminal "$0"
 
 		[ -t 0 ] && echo "Installation process requires modifications in /usr/bin directory." && \
 					echo "To continue please authenticate as the root" && \
@@ -151,7 +151,7 @@ run_as_root()
 		if type dialogbox &> /dev/null
 		then
 			dialogbox --hidden > /dev/null <<EOUSER
-				add label ../../images/cross-mark.png img picture
+				add label $shared_files/cross-mark.png img picture
 				step horizontal
 				add label "Installation process requires modifications in /usr/bin directory.<br>Please run it with root account!" msg
 				step vertical
@@ -195,7 +195,7 @@ run_installation()
 	: ${ICON:="/usr/share/pixmaps/debian-logo.png"}
 
 	cat <<-EOINSTALL
-		add label ../../images/question-mark.png img picture
+		add label $shared_files/question-mark.png img picture
 		step horizontal
 		add groupbox "Download and install the following packages:" lst vertical
 		step vertical
@@ -258,7 +258,7 @@ EOINSTALL
 
 		cat <<-EOINSTALL
 			remove next
-			set img picture ../../images/go-mark.png
+			set img picture $shared_files/go-mark.png
 			position lst
 			add label "" msg
 			set msg stylesheet "min-width: 20em;"
@@ -310,7 +310,7 @@ EOINSTALL
 				then
 					cat <<-EOINSTALL
 						remove prog
-						set img picture ../../images/exclamation-mark.png
+						set img picture $shared_files/exclamation-mark.png
 						set msg text "<p>${DEPENDENCIES[i]} package is still missing.</p>
 							<p/>
 							<p>To repeat the installation, please, check your Internet connectivity and \
@@ -334,7 +334,7 @@ EOINSTALL
 			set cancel title Ok
 			set cancel default
 			set cancel focus
-			set img picture ../../images/check-mark.png
+			set img picture $shared_files/check-mark.png
 			set msg text "Congratulations!<br>The installation has completed successfully."
 			set title "Installation succeeded!"
 EOINSTALL
@@ -346,7 +346,7 @@ EOINSTALL
 			set cancel title Ok
 			set cancel default
 			set cancel focus
-			set img picture ../../images/check-mark.png
+			set img picture $shared_files/check-mark.png
 			position lst
 			add label "Congratulations!<br>You have the package already installed. There is nothing to install." msg
 			set msg stylesheet "min-width: 20em;"
@@ -380,8 +380,17 @@ install_xdg-bash-functions()
 	exit
 }
 
+get_shared_files_path()
+{
+ shared_files=$(caller)
+ shared_files=${shared_files#*+([[:space:]])}
+ shared_files=${shared_files%/*}
+}
+
 main()
 {
+
+	shopt -qs extglob
 
 	trap "exit" TERM INT HUP QUIT	# this is to suppress detailed output from the shell
 									# not killing itself by SIGINT should not be an issue for this script
@@ -398,6 +407,8 @@ main()
 
 	check_dialogbox
 	run_as_root
+
+	get_shared_files_path
 
 	coproc dialogbox --hidden
 	exec <&${COPROC[0]}

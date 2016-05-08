@@ -382,11 +382,17 @@ void DialogBox::ExecuteCommand(DialogCommand command)
 
 				if(command.command & DialogCommand::option_visible & DialogCommand::option_mask)
 					{
-						QTimer::singleShot(0, widget, SLOT(show()));	// calling slot from slot works not always
-						if(QWidget* proxywidget=widget->focusProxy()) QTimer::singleShot(0, proxywidget, SLOT(show()));
+						widget->show();
+						if(QWidget* proxywidget=widget->focusProxy()) proxywidget->show();
 					}
 
 				if(command.control) SetOptions(widget, command.control, command.control, command.GetText());
+
+				// setting of some properties (calls like show and hide) generates events which are optimised next
+				// or sets widget attributes which might impact next calls
+				// to avoid races and to ensure the command is executed as expected we process all events that
+				// have been generated:
+				QCoreApplication::processEvents(QEventLoop::ExcludeUserInputEvents | QEventLoop::ExcludeSocketNotifiers);
 				break;
 			case DialogCommand::unset:
 				if(command.GetName()[0])
@@ -401,11 +407,9 @@ void DialogBox::ExecuteCommand(DialogCommand command)
 				// see http://doc.qt.io/qt-4.8/stylesheet.html for reference
 				if(command.command & DialogCommand::option_stylesheet & DialogCommand::option_mask)
 					{
-						// rarely this fails (unset stylesheet or set it to empty string)
-						// could be the same reason: calling slot from slot but all tricks to avoid this e.g.
-						// QMetaObject::invokeMethod(widget, "setStyleSheet", Qt::QueuedConnection, Q_ARG(QString, ""));
-						// gave 0 results
-						// there must be some issue in style sheet subsystem
+						// rarely it was seen this fails (unset stylesheet or set it to empty string)
+						// hopefully this was caused by the race which is now fixed
+						// (queued signaling between threads and optimisation of queued GUI events)
 						widget->setStyleSheet(QString());
 						if(QWidget* proxywidget=widget->focusProxy())
 							proxywidget->setStyleSheet(QString());
@@ -413,11 +417,17 @@ void DialogBox::ExecuteCommand(DialogCommand command)
 
 				if(command.command & DialogCommand::option_visible & DialogCommand::option_mask)
 					{
-						QTimer::singleShot(0, widget, SLOT(hide()));	// calling slot from slot works not always
-						if(QWidget* proxywidget=widget->focusProxy()) QTimer::singleShot(0, proxywidget, SLOT(hide()));
+						widget->hide();
+						if(QWidget* proxywidget=widget->focusProxy()) proxywidget->hide();
 					}
 
 				if(command.control) SetOptions(widget, 0, command.control, NULL);
+
+				// setting of some properties (calls like show and hide) generates events which are optimised next
+				// or sets widget attributes which might impact next calls
+				// to avoid races and to ensure the command is executed as expected we process all events that
+				// have been generated:
+				QCoreApplication::processEvents(QEventLoop::ExcludeUserInputEvents | QEventLoop::ExcludeSocketNotifiers);
 				break;
 			case DialogCommand::remove:
 				RemoveWidget(command.GetName());
