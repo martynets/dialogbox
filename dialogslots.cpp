@@ -121,7 +121,7 @@ void DialogBox::ListboxItemSelected(QListWidgetItem* current)
 			if(objectname[0])
 				{
 					fprintf(output, "%s=", objectname);
-					fprintf(output, "%s\n", current->text().toLocal8Bit().constData());
+					fprintf(output, "%s\n", current?current->text().toLocal8Bit().constData():"");
 					fflush(output);
 				}
 		}

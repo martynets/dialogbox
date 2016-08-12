@@ -273,14 +273,22 @@ void DialogBox::AddCombobox(const char* title, const char* name, bool editable, 
 	if(group_layout) group_layout->insertLayout(group_index++,box);
 	else current_layout->insertLayout(current_index++,box);
 
+	// Qt::QueuedConnection is used for this type widget to fix the bug
+	// when the first added item made current and is reported as an emty one
     if(selection)
-		connect(list, SIGNAL(currentIndexChanged(int)), this, SLOT(ComboboxItemSelected(int)));
+		connect(list, SIGNAL(currentIndexChanged(int)), this, SLOT(ComboboxItemSelected(int)), Qt::QueuedConnection);
 
 	update_tab_order();
 }
 
 void DialogBox::AddItem(const char* title, const char* icon, bool current)
 {
+	// It seems the insertRows call triggers signals (e.g. rowsAboutToBeInserted, rowsInserted or so) which are
+	// queued or cause delays in some other way for widgets' currentIndexChanged/currentItemChanged signals
+	// (probably for setData calls...).
+	// That is why QComboBox object's index update is queued/delayed and we have to use Qt::QueuedConnection
+	// for connections for objects of this type.
+
 	if(current_view)
 		{
 			QAbstractItemModel* model=current_view->model();
@@ -601,8 +609,9 @@ void DialogBox::ClearChosenList()
 	if(chosen_view && !chosen_row_flag)
 		{
 			QAbstractItemModel* model=chosen_view->model();
-			if(model->removeRows(0,model->rowCount())) view_index=0;
-			else view_index=model->rowCount();
+
+			model->removeRows(0,model->rowCount());
+			if(chosen_view == current_view) view_index=model->rowCount();
 		}
 }
 

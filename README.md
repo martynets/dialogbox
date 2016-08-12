@@ -26,7 +26,7 @@ See the end of the file for [license conditions](#license).
 -------------------------------------------------------------------------------
 
 #####Introduction
-The `dialogbox` application is a scriptable GUI dialod box with various widgets. The desired dialog box is built and modified by commands read on the standard input when the end-user actions are reported on standard output.
+The `dialogbox` application is a scriptable engine which provides a fully customizable GUI dialod box with various widgets. The desired dialog box is built and modified by commands read on the standard input when the end-user actions are reported on standard output. It implements the idea of a `GUI <-> text` filter tool.
 
 The main purpose of this application is to provide GUI functionality to shell scripts or any other pure console applications capable to communicate with a child process via its standard input/output.
 
@@ -948,6 +948,7 @@ There are some known bugs which root cause underlies in private Qt objects:
 #####Change Log
 |Publication Date|Version|Comments                                 |
 |----------------|-------|-----------------------------------------|
+|                |Current master branch    |Fixed bugs:<br><li>race of queued inter-thread signals and/or queued GUI events, set widget attributes;<li>segmentation on a clear command for listbox widget with selection option enabled; <li>the first item added to a combobox/dropdown widget with selection option is reported as empty;
 |Feb 29, 2016    |1.0    |Initial released version                 |
 |Dec 12, 2015    |0.9    |Initial development, non-released version|
 |Nov 28, 2015    |0.8    |Initial development, non-released version|

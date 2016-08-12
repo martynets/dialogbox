@@ -328,10 +328,10 @@ void DialogBox::SetOptions(QWidget* widget, unsigned int options, unsigned int m
 		{
 			switch(type)
 				{
-					case DialogCommand::combobox:
+					case DialogCommand::combobox:	// note Qt::QueuedConnection type is used for this type widget
 						disconnect(proxywidget, SIGNAL(currentIndexChanged(int)), this, SLOT(ComboboxItemSelected(int)));
 						if(options & DialogCommand::property_selection & DialogCommand::property_mask)
-							connect(proxywidget, SIGNAL(currentIndexChanged(int)), this, SLOT(ComboboxItemSelected(int)));
+							connect(proxywidget, SIGNAL(currentIndexChanged(int)), this, SLOT(ComboboxItemSelected(int)), Qt::QueuedConnection);
 						break;
 					case DialogCommand::listbox:
 						disconnect(proxywidget, SIGNAL(currentItemChanged(QListWidgetItem*, QListWidgetItem*)),
