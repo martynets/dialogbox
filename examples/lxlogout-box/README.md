@@ -3,7 +3,7 @@ See the end of the file for [license conditions](#license).
 
 -------------------------------------------------------------------------------
 
-#####Introduction
+#### Introduction
 `lxsession-logout` is the default quit manager for `LXSession`. It silently depends on a list of packages which ends up with `PolicyKit` and `ConsoleKit`.
 
 For system administrators who tend to minimalistic design or are concerned on security the `lxlogout-box` script might be an option.
@@ -14,7 +14,7 @@ It fully emulates look and feel of the original `lxsession-logout` application a
 
 It is not designed specially for LXDE but uses images from that package. That is the reason for the first two letters in its name. Generally it can be used for any environment but might need some adjustments for non-LXDE sessions.
 
-#####Software requirements
+#### Software requirements
 `lxlogout-box` script depends on the following software packages:
 - the `bash` version 4.0+
 - the `dialogbox` application (can be downloaded from [the dialogbox repository](https://github.com/martynets/dialogbox))
@@ -37,10 +37,10 @@ The script uses the banner image from the `lxde-common` package and icons from t
 
 This software is shipped with the `installer` script which is designed for Debian derivatives and is based on the "Debian package management system". In particular it uses tools from `dpkg` and `apt` packages. With minor manual alterations it can be adapted for other systems.
 
-#####Downloading
+#### Downloading
 This script is shipped as an example for [the dialogbox application](https://github.com/martynets/dialogbox/) and can be downloaded from its repository.
 
-#####Installation
+#### Installation
 This script doesn't require a specific installation and can be called from any location. To be used alone it can be copied to `/usr/bin` directory. To be used as the replacement for `lxsession-logout` a symlink to it must be created named `lxde-logout`. It is advised to save backup copy of the original `lxde-logout` script.
 All these installation tasks are done by the `installer` script present in the current directory. It provides user-friendly GUI interface and does the following:
 - renames `lxde-logout` script to `lxde-logout-original`
@@ -53,21 +53,21 @@ All these tasks require root privilages. The installer tries to re-run itself wi
 
 To uninstall the `lxlogout-box` script the above tasks must be undone manually.
 
-#####Usage
+#### Usage
 The `lxlogout-box` script doesn't accept any command line arguments. It can be called directly or your desktop solution must be configured in its specific way to run it as the quit manager. For the `LXDE` the configuration is done during the installation described above.
 The `lxlogout-box` script does some heuristic to detect commands for screen lock, logout and user switch. This heuristic is similar to what the `lxsession-logout` application does. If this doesn't suit your particular environment the beginning of the script may be revised (it is commented in appropriate way).
 
-#####Bug Reporting
+#### Bug Reporting
 You can send `lxlogout-box` bug reports and/or any compatibility issues directly to the author [martynets@volia.ua](mailto:martynets@volia.ua).
 
 You can also use the online bug tracking system in the GitHub `dialogbox` project to submit new problem reports or search for existing ones:
 
   https://github.com/martynets/dialogbox/issues
 
-#####Change Log
+#### Change Log
 1.0    Initial release
 
-#####License
+#### License
 Copyright (C) 2015 Andriy Martynets [martynets@volia.ua](mailto:martynets@volia.ua)<br>
 This file is part of `lxlogout-box`.
 

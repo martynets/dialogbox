@@ -3,7 +3,7 @@ See the end of the file for [license conditions](#license).
 
 -------------------------------------------------------------------------------
 
-#####Introduction
+#### Introduction
 `su-box` is the `bash` script which implements a GUI frontend for `su` command. The main purpose for it is to run a GUI application with different user credentials. But the script is also capable to run a console tool within current terminal if any.
 The script is absolutely desktop agnostic and can be used on systems completely free from any GNOME, KDE, etc. stuff.
 If target command is provided on command line the script asks only password for the requested user (root by default) and its dialog looks similar to the following depending on your current theme:
@@ -14,7 +14,7 @@ If the command is not provided it will be also asked for and the script's dialog
 
 ![](../../images/su-box2.png)
 
-#####Software requirements
+#### Software requirements
 `su-box` script depends on the following software packages:
 - the `bash` version 4.0+
 - the `su` utility (`login` package)
@@ -24,10 +24,10 @@ If the command is not provided it will be also asked for and the script's dialog
 
 This software is shipped with the `installer` script which is designed for Debian derivatives and is based on the "Debian package management system". In particular it uses tools from `dpkg` and `apt` packages. With minor manual alterations it can be adapted for other systems.
 
-#####Downloading
+#### Downloading
 This script is shipped as an example for [the dialogbox application](https://github.com/martynets/dialogbox/) and can be downloaded from its repository.
 
-#####Installation
+#### Installation
 This script doesn't require a specific installation and can be called from any location. It is advised to install it in `/usr/bin` directory.
 
 The `installer` script present in the current directory provides user friendly GUI interface to installation tasks. It downloads and installs dependencies such as the [dialogbox application](https://github.com/martynets/dialogbox/), the [execpty tool](https://github.com/martynets/execpty/) and the  [xdg-bash-functions package](https://github.com/martynets/xdg-bash-functions/) as well as the target script.
@@ -38,7 +38,7 @@ All these tasks require root privilages. The installer tries to re-run itself wi
 
 To uninstall the script the above tasks must be undone manually.
 
-#####Usage
+#### Usage
 The `su-box` script recognizes several command line options. The command line syntax is the following:
 ```
 su-box [-t|--terminal] [-u|--user USERNAME] [-c|--command] [COMMAND]
@@ -63,7 +63,7 @@ The `--command` option starts the target command and list of its arguments as th
 
 If the command to run is missed it is asked for in the dialog. The username is also available for editing in this case. Otherwise the password field is the only available for entering. See screenshots above.
 
-######Values of exit status mean the following:
+##### Values of exit status mean the following:
 - 0 - success (`--help` or `--version` only)
 - 1	- authentication failure (derived from `su`)
 - 127 - failure (with corresponding error message)
@@ -71,20 +71,20 @@ If the command to run is missed it is asked for in the dialog. The username is a
 - Values greater than 128 - the command is terminated by a signal. The value is the signal number plus 128
 - None of the above cases (successful command execution) - exit status of the command executed
 
-#####Bug Reporting
+#### Bug Reporting
 You can send `su-box` bug reports and/or any compatibility issues directly to the author [martynets@volia.ua](mailto:martynets@volia.ua).
 
 You can also use the online bug tracking system in the GitHub `dialogbox` project to submit new problem reports or search for existing ones:
 
   https://github.com/martynets/dialogbox/issues
 
-#####Change Log
+#### Change Log
 |Publication Date|Version|Comments                                 |
 |----------------|-------|-----------------------------------------|
 |Feb 29, 2016    |1.1    |Command and user name fields made comboboxes populated from commands history and `/etc/passwd` files respectively|
 |Nov 28, 2015    |1.0    |Initial released version                 |
 
-#####License
+#### License
 Copyright (C) 2015, 2016 Andriy Martynets [martynets@volia.ua](mailto:martynets@volia.ua)<br>
 This file is part of `su-box`.
 
