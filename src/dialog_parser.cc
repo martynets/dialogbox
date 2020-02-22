@@ -1,371 +1,389 @@
 /*
  * GUI widgets for shell scripts - dialogbox version 1.0
  *
- * Copyright (C) 2015, 2016 Andriy Martynets <martynets@volia.ua>
- *--------------------------------------------------------------------------------------------------------------
+ * Copyright (C) 2015-2016, 2020 Andriy Martynets <andy.martynets@gmail.com>
+ *------------------------------------------------------------------------------
  * This file is part of dialogbox.
  *
- * Dialogbox is free software: you can redistribute it and/or modify it under the terms of
- * the GNU General Public License as published by the Free Software Foundation,
- * either version 3 of the License, or (at your option) any later version.
+ * Dialogbox is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- * Dialogbox is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
- * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
+ * Dialogbox is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License along with dialogbox.
- * If not, see http://www.gnu.org/licenses/.
- *--------------------------------------------------------------------------------------------------------------
+ * You should have received a copy of the GNU General Public License
+ * along with dialogbox. If not, see http://www.gnu.org/licenses/.
+ *------------------------------------------------------------------------------
  */
 
-#include "dialogbox.hpp"
+#include "dialogbox.h"
 
-DialogParser::DialogParser(DialogBox* parent, FILE* in) :
-			QThread(parent),
-			dialog(parent),
-			input(in)
+using namespace DialogCommandTokens;
+
+DialogParser::DialogParser(DialogBox *parent, FILE *in) :
+    QThread(parent),
+    dialog(parent),
+    input(in)
 {
-	command=noop;
-	control=widget_mask;
-	stage=stage_command;
-	token=buffer_index=0;
+    command = NoopCommand;
+    control = WidgetMask;
+    stage = StageCommand;
+    token = bufferIndex = 0;
 
-	qRegisterMetaType<DialogCommand>("DialogCommand");
-	// Qt::BlockingQueuedConnection type is used to ensure commands are executed sequentially
-	// This avoids races e.g. show hide show sequence in v1.0
-	if(parent)
-		connect(this, SIGNAL(SendCommand(DialogCommand)),
-			parent, SLOT(ExecuteCommand(DialogCommand)), Qt::BlockingQueuedConnection);
+    qRegisterMetaType<DialogCommand>("DialogCommand");
+    // Qt::BlockingQueuedConnection type is used to ensure commands are executed
+    // sequentially. This avoids races e.g. show hide show sequence in v1.0.
+    if (parent) {
+        connect(this, SIGNAL(sendCommand(DialogCommand)), parent,
+                SLOT(executeCommand(DialogCommand)),
+                Qt::BlockingQueuedConnection);
+    }
 }
 
 DialogParser::~DialogParser()
 {
-	terminate();	// we cannot gracefully terminate this thread as input
-					// from stdin may be blocking when attached to a terminal
-	wait();
+    // We cannot gracefully terminate this thread as input from stdin may be
+    // blocking when attached to a terminal.
+    terminate();
+    wait();
 }
 
-void DialogParser::SetParent(DialogBox* parent)
+void DialogParser::setParent(DialogBox *parent)
 {
-	if(dialog)
-		disconnect(this, SIGNAL(SendCommand(DialogCommand)),
-			dialog, SLOT(ExecuteCommand(DialogCommand)));
+    if (dialog) {
+        disconnect(this, SIGNAL(sendCommand(DialogCommand)),
+                   dialog, SLOT(executeCommand(DialogCommand)));
+    }
 
-	dialog=parent;
-	QObject::setParent(parent);
-	if(parent)
-		connect(this, SIGNAL(SendCommand(DialogCommand)),
-			parent, SLOT(ExecuteCommand(DialogCommand)), Qt::BlockingQueuedConnection);
+    dialog = parent;
+    QObject::setParent(parent);
+    if (parent) {
+        connect(this, SIGNAL(sendCommand(DialogCommand)), parent,
+                SLOT(executeCommand(DialogCommand)),
+                Qt::BlockingQueuedConnection);
+    }
 }
 
 void DialogParser::run()
 {
-	bool quoted, backslash, endofline;
-	int c;
+    bool quoted;
+    bool backslash;
+    bool endOfLine;
+    int c;
 
-	while(true) // this thread will be ended up by terminate() call from the destructor
-		{
-			quoted=backslash=endofline=false;
-			do
-				{
-					if(buffer_index!=token) token=++buffer_index;
+    // This thread will be ended up by terminate() call from the destructor.
+    while (true) {
+        quoted = backslash = endOfLine = false;
+        do {
+            if (bufferIndex != token)
+                token = ++bufferIndex;
 
-					while ((c=fgetc(input))!=EOF)
-						{
-							if(isspace(c) && !quoted)
-								{
-									if(isblank(c))
-										{
-											if(buffer_index==token) continue;
-											else break;
-										}
-									else
-										{
-											if(!backslash) { endofline=true; break; }
-											else { backslash=false; continue; }
-										}
-								}
-							if(c=='"' && buffer_index==token && !quoted && !backslash) { quoted=true; continue; }
-							if(c=='"' && quoted && !backslash) { quoted=false; break; }
-							if(c=='\\' && !backslash) { backslash=true; continue; }
-							if(backslash && c!='"') buffer[buffer_index++]='\\';
-							backslash=false;
-							buffer[buffer_index++]=c;
+            while ((c = fgetc(input)) != EOF) {
+                if (isspace(c) && !quoted) {
+                    if (isblank(c)) {
+                        if (bufferIndex == token)
+                            continue;
+                        else
+                            break;
+                    } else {
+                        if (!backslash) {
+                            endOfLine = true;
+                            break;
+                        } else {
+                            backslash = false;
+                            continue;
+                        }
+                    }
+                }
+                if (c == '"' && bufferIndex == token && !quoted && !backslash) {
+                    quoted = true;
+                    continue;
+                }
+                if (c == '"' && quoted && !backslash) {
+                    quoted = false;
+                    break;
+                }
+                if (c == '\\' && !backslash) {
+                    backslash = true;
+                    continue;
+                }
+                if (backslash && c != '"')
+                    buffer[bufferIndex++] = '\\';
+                backslash = false;
+                buffer[bufferIndex++] = c;
 
-							if(buffer_index>=BUFFER_SIZE-2) break;	// potentially we need space
-																	// for backslash and terminating zero
-						}
-					if(backslash) buffer[buffer_index++]='\\';
-					buffer[buffer_index]='\0';
-					process_token();
-					if(endofline)
-						{
-							issue_command();
-							endofline=false;
-						}
-				}
-			while(c!=EOF);
-			issue_command();
-			msleep(50);				// this call is to reduce the CPU time consumption
-		}
+                // We need to reserve space for backslash and terminating zero.
+                if (bufferIndex >= BUFFER_SIZE - 2)
+                    break;
+            }
+            if (backslash)
+                buffer[bufferIndex++] = '\\';
+            buffer[bufferIndex] = '\0';
+            processToken();
+            if (endOfLine) {
+                issueCommand();
+                endOfLine = false;
+            }
+        } while (c != EOF);
+        issueCommand();
+        // Sleep for a while to reduce the CPU time consumption.
+        msleep(50);
+    }
 }
 
 /*******************************************************************************
- *
- *	Analyses tokens and assembles commands of them.
- *
- * ****************************************************************************/
-void DialogParser::process_token()
+ *  DialogParser::processToken analyses tokens and assembles commands of them.
+ ******************************************************************************/
+void DialogParser::processToken()
 {
-	const struct
-		{
-			const char* command_keyword;	// keyword to recognize
-			unsigned int command_code;		// command code to assign
-			unsigned int command_stages;	// stages set to assign
-		} commands_parser[]=
-		{
-			{"add", add, stage_type | stage_title | stage_name | stage_options | stage_text | stage_aux_text | stage_command},
-			{"end", end, stage_type | stage_command},
-			{"position", position, stage_options | stage_text | stage_command},
-			{"remove", remove, stage_name | stage_command},
-			{"clear", clear, stage_name | stage_command},
-			{"step", step, stage_options | stage_command},
-			{"set", set, stage_name | stage_options | stage_text | stage_command},
-			{"unset", unset, stage_name | stage_options | stage_command},
-			{"enable", set | (option_enabled & option_mask), stage_name | stage_command},
-			{"disable", unset | (option_enabled & option_mask), stage_name | stage_command},
-			{"show", set | (option_visible & option_mask), stage_name | stage_command},
-			{"hide", unset | (option_visible & option_mask), stage_name | stage_command},
-			{"query", query, stage_command},
-			{NULL, 0, 0}
-		};
+    const struct {
+        const char *commandKeyword;  // keyword to recognize
+        unsigned int commandCode;    // command code to assign
+        unsigned int commandStages;  // stages set to assign
+    } commandsParser[] = {
+        {"add", AddCommand,
+            StageType | StageTitle | StageName | StageOptions | StageText
+            | StageAuxText | StageCommand},
+        {"end", EndCommand, StageType | StageCommand},
+        {"position", PositionCommand, StageOptions | StageText | StageCommand},
+        {"remove", RemoveCommand, StageName | StageCommand},
+        {"clear", ClearCommand, StageName | StageCommand},
+        {"step", StepCommand, StageOptions | StageCommand},
+        {"set", SetCommand,
+            StageName | StageOptions | StageText | StageCommand},
+        {"unset", UnsetCommand, StageName | StageOptions | StageCommand},
+        {"enable", SetCommand | (OptionEnabled & OptionMask),
+            StageName | StageCommand},
+        {"disable", UnsetCommand | (OptionEnabled & OptionMask),
+            StageName | StageCommand},
+        {"show", SetCommand | (OptionVisible & OptionMask),
+            StageName | StageCommand},
+        {"hide", UnsetCommand | (OptionVisible & OptionMask),
+            StageName | StageCommand},
+        {"query", QueryCommand, StageCommand},
+        {nullptr, 0, 0}
+    };
 
-	const struct
-		{
-			const char* control_keyword;	// keyword to recognize
-			unsigned int control_code;		// control type code to assign
-		} controls_parser[]=
-		{
-			{"checkbox", checkbox},
-			{"frame", frame},
-			{"groupbox", groupbox},
-			{"label", label},
-			{"pushbutton", pushbutton},
-			{"radiobutton", radiobutton},
-			{"separator", separator},
-			{"textbox", textbox},
-			{"listbox", listbox},
-			{"dropdownlist", combobox},
-			{"combobox", combobox | (property_editable & property_mask)},
-			{"item", item},
-			{"progressbar", progressbar},
-			{"slider", slider},
-			{"textview", textview},
-			{"tabs", tabs},
-			{"page", page},
-			{NULL, 0}
-		};
+    const struct {
+        const char *controlKeyword;  // keyword to recognize
+        unsigned int controlCode;    // control type code to assign
+    } controlsParser[] = {
+        {"checkbox", CheckBoxWidget},
+        {"frame", FrameWidget},
+        {"groupbox", GroupBoxWidget},
+        {"label", LabelWidget},
+        {"pushbutton", PushButtonWidget},
+        {"radiobutton", RadioButtonWidget},
+        {"separator", SeparatorWidget},
+        {"textbox", TextBoxWidget},
+        {"listbox", ListBoxWidget},
+        {"dropdownlist", ComboBoxWidget},
+        {"combobox", ComboBoxWidget | (PropertyEditable & PropertyMask)},
+        {"item", ItemWidget},
+        {"progressbar", ProgressBarWidget},
+        {"slider", SliderWidget},
+        {"textview", TextViewWidget},
+        {"tabs", TabsWidget},
+        {"page", PageWidget},
+        {nullptr, 0}
+    };
 
-	// each struct in the array below must define properties for the same control type or set of types
-	// if the same keyword applies to different properties/control types it must be repeated as new struct
-	const struct
-		{
-			const char* option_keyword;		// keyword to recognize
-			unsigned int option_code;		// command option/control property to set or reset
-			bool option_reset;				// flag to reset the option
-			bool command_flag;				// flag to process command option
-		} options_parser[]=
-		{
-			{"checkable", property_checkable, false, false},
-			{"checked", property_checked, false, false},
-			{"text", property_text, false, false},
-			{"title", property_title, false, false},
-			{"password", property_password, false, false},
-			{"placeholder", property_placeholder, false, false},
-			{"icon", property_icon, false, false},
-			{"iconsize", property_iconsize, false, false},
-			{"animation", property_animation, false, false},
-			{"picture", property_picture, false, false},
-			{"apply", property_apply, false, false},
-			{"exit", property_exit, false, false},
-			{"default", property_default, false, false},
-			{"space", option_space, false, true},		// a kind of control without options
-			{"stretch", option_stretch, false, true},	// a kind of control without options
-			{"behind", option_behind, false, true},
-			{"onto", option_onto, false, true},
-			{"enabled", option_enabled, false, true},
-			{"focus", option_focus, false, true},
-			{"stylesheet", option_stylesheet, false, true},
-			{"visible", option_visible, false, true},
-			{"horizontal", option_vertical, true, true},
-			{"horizontal", property_vertical, true, false},
-			{"vertical", option_vertical, false, true},
-			{"vertical", property_vertical, false, false},
-			{"plain", property_plain, false, false},
-			{"raised", property_raised, false, false},
-			{"sunken", property_sunken, false, false},
-			{"noframe", property_noframe, false, false},
-			{"box", property_box, false, false},
-			{"panel", property_panel, false, false},
-			{"styled", property_styled, false, false},
-			{"current", property_current, false, false},
-			{"activation", property_activation, false, false},
-			{"selection", property_selection, false, false},
-			{"minimum", property_minimum, false, false},
-			{"maximum", property_maximum, false, false},
-			{"value", property_value, false, false},
-			{"busy", property_busy, false, false},
-			{"file", property_file, false, false},
-			{"top", property_position_top, false, false},
-			{"bottom", property_position_bottom, false, false},
-			{"left", property_position_left, false, false},
-			{"right", property_position_right, false, false},
-			{NULL, 0, 0, 0}
-		};
+    // Each item of the array below defines properties or options of a control.
+    // If the same keyword applies to different properties/options it must be
+    // repeated as a separate item.
+    const struct {
+        const char *optionKeyword;  // keyword to recognize
+        unsigned int optionCode;    // command option or control property to set
+        bool optionReset;           // flag to reset the option
+        bool commandFlag;           // flag to process command option
+    } optionsParser[] = {
+        {"checkable", PropertyCheckable, false, false},
+        {"checked", PropertyChecked, false, false},
+        {"text", PropertyText, false, false},
+        {"title", PropertyTitle, false, false},
+        {"password", PropertyPassword, false, false},
+        {"placeholder", PropertyPlaceholder, false, false},
+        {"icon", PropertyIcon, false, false},
+        {"iconsize", PropertyIconSize, false, false},
+        {"animation", PropertyAnimation, false, false},
+        {"picture", PropertyPicture, false, false},
+        {"apply", PropertyApply, false, false},
+        {"exit", PropertyExit, false, false},
+        {"default", PropertyDefault, false, false},
+        // space and stretch are a kind of controls without options
+        {"space", OptionSpace, false, true},
+        {"stretch", OptionStretch, false, true},
+        {"behind", OptionBehind, false, true},
+        {"onto", OptionOnto, false, true},
+        {"enabled", OptionEnabled, false, true},
+        {"focus", OptionFocus, false, true},
+        {"stylesheet", OptionStyleSheet, false, true},
+        {"visible", OptionVisible, false, true},
+        {"horizontal", OptionVertical, true, true},
+        {"horizontal", PropertyVertical, true, false},
+        {"vertical", OptionVertical, false, true},
+        {"vertical", PropertyVertical, false, false},
+        {"plain", PropertyPlain, false, false},
+        {"raised", PropertyRaised, false, false},
+        {"sunken", PropertySunken, false, false},
+        {"noframe", PropertyNoframe, false, false},
+        {"box", PropertyBox, false, false},
+        {"panel", PropertyPanel, false, false},
+        {"styled", PropertyStyled, false, false},
+        {"current", PropertyCurrent, false, false},
+        {"activation", PropertyActivation, false, false},
+        {"selection", PropertySelection, false, false},
+        {"minimum", PropertyMinimum, false, false},
+        {"maximum", PropertyMaximum, false, false},
+        {"value", PropertyValue, false, false},
+        {"busy", PropertyBusy, false, false},
+        {"file", PropertyFile, false, false},
+        {"top", PropertyPositionTop, false, false},
+        {"bottom", PropertyPositionBottom, false, false},
+        {"left", PropertyPositionLeft, false, false},
+        {"right", PropertyPositionRight, false, false},
+        {nullptr, 0, false, false}
+    };
 
-	if(stage & stage_command)
-		{
-			int i=0;
+    if (stage & StageCommand) {
+        int i = 0;
 
-			while(commands_parser[i].command_keyword)
-				{
-					if(!strcmp(buffer+token,commands_parser[i].command_keyword))
-						{
-							issue_command();
+        while (commandsParser[i].commandKeyword) {
+            if (!strcmp(buffer + token, commandsParser[i].commandKeyword)) {
+                issueCommand();
 
-							command=commands_parser[i].command_code;
-							stage=commands_parser[i].command_stages;
+                command = commandsParser[i].commandCode;
+                stage = commandsParser[i].commandStages;
 
-							return;
-						}
+                return;
+            }
 
-					i++;
-				}
-		}
+            i++;
+        }
+    }
 
-	if(stage & stage_type)
-		{
-			int i=0;
+    if (stage & StageType) {
+        int i = 0;
 
-			while(controls_parser[i].control_keyword)
-				{
-					if(!strcmp(buffer+token,controls_parser[i].control_keyword))
-						{
-							control=controls_parser[i].control_code;
-							stage^=stage_type;
+        while (controlsParser[i].controlKeyword) {
+            if (!strcmp(buffer + token, controlsParser[i].controlKeyword)) {
+                control = controlsParser[i].controlCode;
+                stage ^= StageType;
 
-							// make buffer_index equal to token to discard current token
-							// set them to zero to rewind to the beginning of the buffer
-							buffer_index=token=0;
-							return;
-						}
+                // Make bufferIndex equal to token to discard current token.
+                // Set them to zero to rewind to the beginning of the buffer.
+                bufferIndex = token = 0;
+                return;
+            }
 
-					i++;
-				}
-		}
+            i++;
+        }
+    }
 
-	if(stage & stage_options)
-		{
-			int i=0;
+    if (stage & StageOptions) {
+        int i = 0;
 
-			while(options_parser[i].option_keyword)
-				{
-					if(!strcmp(buffer+token,options_parser[i].option_keyword))
-						{
-							if(options_parser[i].command_flag)
-								{
-									if(options_parser[i].option_code & command)
-										{
-											if(options_parser[i].option_reset)
-												command&=~(options_parser[i].option_code & option_mask);	// reset option bit
-											else
-												command|=options_parser[i].option_code & option_mask;	// set option bit
+        while (optionsParser[i].optionKeyword) {
+            if (!strcmp(buffer + token, optionsParser[i].optionKeyword)) {
+                if (optionsParser[i].commandFlag) {
+                    if (optionsParser[i].optionCode & command) {
+                        if (optionsParser[i].optionReset) {
+                            // Reset option bit
+                            command &= ~(optionsParser[i].optionCode
+                                       & OptionMask);
+                        } else {
+                            // Set option bit
+                            command |= optionsParser[i].optionCode & OptionMask;
+                        }
 
-											stage&=~(stage_title | stage_name);
+                        stage &= ~(StageTitle | StageName);
 
-											// make buffer_index equal to token to discard current token
-											buffer_index=token;
-											return;
-										}
-								}
-							else
-								{
-									if(options_parser[i].option_code & control)
-										{
-											// make control type more specific
-											control&=options_parser[i].option_code | property_mask;
+                        // Make bufferIndex equal to token to discard current
+                        // token
+                        bufferIndex = token;
+                        return;
+                    }
+                } else {
+                    if (optionsParser[i].optionCode & control) {
+                        // Make control type more specific
+                        control &= optionsParser[i].optionCode | PropertyMask;
 
-											if(options_parser[i].option_reset)
-												control&=~(options_parser[i].option_code & property_mask);	// reset property bit
-											else
-												control|=options_parser[i].option_code & property_mask;	// set property bit
+                        if (optionsParser[i].optionReset) {
+                            // Reset property bit
+                            control &= ~(optionsParser[i].optionCode
+                                       & PropertyMask);
+                        } else {
+                            // Set property bit
+                            control |= optionsParser[i].optionCode
+                                       & PropertyMask;
+                        }
 
-											stage&=~(stage_title | stage_name);
+                        stage &= ~(StageTitle | StageName);
 
-											// make buffer_index equal to token to discard current token
-											buffer_index=token;
-											return;
-										}
-								}
-						}
+                        // Make bufferIndex equal to token to discard current
+                        // token
+                        bufferIndex = token;
+                        return;
+                    }
+                }
+            }
 
-					i++;
-				}
-		}
+            i++;
+        }
+    }
 
-	if(stage & stage_title)
-		{
-			title=token;
+    if (stage & StageTitle) {
+        title = token;
 
-			stage^=stage_title;
+        stage ^= StageTitle;
 
-			// set token to be different from buffer_index
-			// this indicates the token was recognized
-			// next values for buffer_index and token will be set in run() function
-			token=BUFFER_SIZE;
-			return;
-		}
+        // Set token to be different from bufferIndex.
+        // This indicates the token was recognized.
+        // Next, values for bufferIndex and token will be set in run() function.
+        token = BUFFER_SIZE;
+        return;
+    }
 
-	if(stage & stage_name)
-		{
-			name=token;
-			stage^=stage_name;
+    if (stage & StageName) {
+        name = token;
+        stage ^= StageName;
 
-			token=BUFFER_SIZE;
-			return;
-		}
+        token = BUFFER_SIZE;
+        return;
+    }
 
-	if(stage & stage_text)
-		{
-			text=token;
-			stage^=stage_text;
+    if (stage & StageText) {
+        text = token;
+        stage ^= StageText;
 
-			token=BUFFER_SIZE;
-			return;
-		}
-	if(stage & stage_aux_text)
-		{
-			auxtext=token;
-			stage^=stage_aux_text;
+        token = BUFFER_SIZE;
+        return;
+    }
+    if (stage & StageAuxText) {
+        auxtext = token;
+        stage ^= StageAuxText;
 
-			token=BUFFER_SIZE;
-			return;
-		}
+        token = BUFFER_SIZE;
+        return;
+    }
 
-	// the case the token wasn't recognized
-	buffer_index=token;
+    // The case the token wasn't recognized
+    bufferIndex = token;
 }
 
-void DialogParser::issue_command()
+void DialogParser::issueCommand()
 {
-	if(command!=noop)
-		{
-			emit SendCommand(*this);
+    if (command != NoopCommand) {
+        emit sendCommand(*this);
 
-			command=noop;
-			control=widget_mask;
-			stage=stage_command;
-			title=name=text=auxtext=BUFFER_SIZE-1;
-			token=buffer_index=0;
-		}
+        command = NoopCommand;
+        control = WidgetMask;
+        stage = StageCommand;
+        title = name = text = auxtext = BUFFER_SIZE - 1;
+        token = bufferIndex = 0;
+    }
 }

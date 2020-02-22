@@ -6,7 +6,7 @@ set note stylesheet "qproperty-textInteractionFlags: NoTextInteraction;"
 add separator
 add label "<big>Please confirm the operation" msg
 set msg stylesheet "qproperty-wordWrap: false;
-					qproperty-textInteractionFlags: NoTextInteraction;"
+          qproperty-textInteractionFlags: NoTextInteraction;"
 
 add frame horizontal
 add stretch
@@ -18,9 +18,9 @@ EODEMO
 
 if [ "$?" == "0" ]
 then
-	echo User rejected dialog
+  echo User rejected dialog
 else
-	echo User accepted dialog
+  echo User accepted dialog
 fi
 
 exit 0

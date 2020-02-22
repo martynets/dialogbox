@@ -1,4 +1,4 @@
-Copyright (C) 2015, 2016 Andriy Martynets [martynets@volia.ua](mailto:martynets@volia.ua)<br>
+Copyright (C) 2015, 2016 Andriy Martynets [andy.martynets@gmail.com](mailto:andy.martynets@gmail.com)<br>
 See the end of the file for [license conditions](#license).
 
 -------------------------------------------------------------------------------
@@ -72,7 +72,7 @@ If the command to run is missed it is asked for in the dialog. The username is a
 - None of the above cases (successful command execution) - exit status of the command executed
 
 #### Bug Reporting
-You can send `su-box` bug reports and/or any compatibility issues directly to the author [martynets@volia.ua](mailto:martynets@volia.ua).
+You can send `su-box` bug reports and/or any compatibility issues directly to the author [andy.martynets@gmail.com](mailto:andy.martynets@gmail.com).
 
 You can also use the online bug tracking system in the GitHub `dialogbox` project to submit new problem reports or search for existing ones:
 
@@ -85,7 +85,7 @@ You can also use the online bug tracking system in the GitHub `dialogbox` projec
 |Nov 28, 2015    |1.0    |Initial released version                 |
 
 #### License
-Copyright (C) 2015, 2016 Andriy Martynets [martynets@volia.ua](mailto:martynets@volia.ua)<br>
+Copyright (C) 2015, 2016 Andriy Martynets [andy.martynets@gmail.com](mailto:andy.martynets@gmail.com)<br>
 This file is part of `su-box`.
 
 `su-box` is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 3 of the License, or (at your option) any later version.

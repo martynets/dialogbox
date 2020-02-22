@@ -3,7 +3,7 @@
 #
 # Lxlogout-box version 1.0
 #
-# Copyright (C) 2015 Andriy Martynets <martynets@volia.ua>
+# Copyright (C) 2015 Andriy Martynets <andy.martynets@gmail.com>
 #--------------------------------------------------------------------------------------------------------------
 # This file is part of lxlogout-box.
 #
@@ -26,37 +26,37 @@
 # Lock command
 if type lxlock &> /dev/null
 then
-	COMMAND_LOCK="lxlock"
+  COMMAND_LOCK="lxlock"
 elif type xdg-screensaver &> /dev/null
 then
-	COMMAND_LOCK="xdg-screensaver lock"
+  COMMAND_LOCK="xdg-screensaver lock"
 else
-	COMMAND_LOCK="false"
+  COMMAND_LOCK="false"
 fi
 
 # Logout command
 if [ -n "$_LXSESSION_PID" ]
 then
-	COMMAND_LOGOUT="pkill lxsession"
+  COMMAND_LOGOUT="pkill lxsession"
 else
-	COMMAND_LOGOUT="openbox --exit"
+  COMMAND_LOGOUT="openbox --exit"
 fi
 
 # User Switch command
 if [ -n "$XDG_SEAT_PATH" ]
 then
-	COMMAND_SWITCH="dm-tool switch-to-greeter"	# LightDM
+  COMMAND_SWITCH="dm-tool switch-to-greeter"  # LightDM
 elif ps -C gdmflexiserver &> /dev/null
 then
-	COMMAND_SWITCH="gdmflexiserver --startnew"	# GDM
+  COMMAND_SWITCH="gdmflexiserver --startnew"  # GDM
 elif ps -C kdmctl &> /dev/null
 then
-	COMMAND_SWITCH="kdmctl reserve"				# KDM
+  COMMAND_SWITCH="kdmctl reserve"        # KDM
 elif ps -C lxdm-binary &> /dev/null
 then
-	COMMAND_SWITCH="lxdm-binary -c USER_SWITCH"	# LXDM
+  COMMAND_SWITCH="lxdm-binary -c USER_SWITCH"  # LXDM
 else
-	COMMAND_SWITCH="false"
+  COMMAND_SWITCH="false"
 fi
 
 
@@ -65,14 +65,14 @@ fi
 # =========================================================================================================
 if type icon-functions &> /dev/null
 then
-	. icon-functions
-	ICON_SIZE=24
-	icon_functions_init
+  . icon-functions
+  ICON_SIZE=24
+  icon_functions_init
 else
-	find_actions_icon()
-	{
-		:
-	}
+  find_actions_icon()
+  {
+    :
+  }
 fi
 
 
@@ -87,7 +87,7 @@ ICON=""
 find_actions_icon gnome-session-reboot
 if [ -z "$ICON" ]
 then
-	find_actions_icon view-refresh
+  find_actions_icon view-refresh
 fi
 reboot_icon=${ICON:-"/usr/share/lxsession/images/gnome-session-reboot.png"}
 
@@ -115,7 +115,7 @@ ICON=""
 find_actions_icon cancel
 if [ -z "$ICON" ]
 then
-	find_actions_icon process-stop
+  find_actions_icon process-stop
 fi
 cancel_icon="$ICON"
 
@@ -127,9 +127,9 @@ IFS=$'\n\r\t ' # restore default field separator
 # =========================================================================================================
 if [ -n "$_LXSESSION_PID" ]
 then
-	message=${DESKTOP_SESSION-"LXDE"}	# LXsession name
+  message=${DESKTOP_SESSION-"LXDE"}  # LXsession name
 else
-	message="X"							# non-LXsession environment
+  message="X"              # non-LXsession environment
 fi
 
 #type lsb_release &> /dev/null && message+=" "$(lsb_release -r -s)
@@ -143,34 +143,34 @@ message="Logout $message session ?"
 # =========================================================================================================
 while IFS=$'=' read key value
 do
-	case $key in
-		shutdown)
-			exec sudo /sbin/halt
-			;;
-		reboot)
-			exec sudo /sbin/reboot
-			;;
-		suspend)
-			$COMMAND_LOCK
-			sleep 2
-			exec sudo /usr/sbin/pm-suspend
-			;;
-		hibernate)
-			$COMMAND_LOCK
-			sleep 2
-			exec sudo /usr/sbin/pm-hibernate
-			;;
-		switch)
-			$COMMAND_LOCK
-			exec $COMMAND_SWITCH
-			;;
-		lock)
-			exec $COMMAND_LOCK
-			;;
-		logout)
-			exec $COMMAND_LOGOUT
-			;;
-	esac
+  case $key in
+    shutdown)
+      exec sudo /sbin/halt
+      ;;
+    reboot)
+      exec sudo /sbin/reboot
+      ;;
+    suspend)
+      $COMMAND_LOCK
+      sleep 2
+      exec sudo /usr/sbin/pm-suspend
+      ;;
+    hibernate)
+      $COMMAND_LOCK
+      sleep 2
+      exec sudo /usr/sbin/pm-hibernate
+      ;;
+    switch)
+      $COMMAND_LOCK
+      exec $COMMAND_SWITCH
+      ;;
+    lock)
+      exec $COMMAND_LOCK
+      ;;
+    logout)
+      exec $COMMAND_LOGOUT
+      ;;
+  esac
 done < <(
 
 dialogbox --hidden <<EOLOGOUT
@@ -180,10 +180,10 @@ add separator
 
 add label "$message" msg
 set msg stylesheet "qproperty-wordWrap: false;
-					qproperty-textInteractionFlags: NoTextInteraction;
-					qproperty-alignment: AlignHCenter;
-					font: bold 14pt;
-					padding: 4px;"
+          qproperty-textInteractionFlags: NoTextInteraction;
+          qproperty-alignment: AlignHCenter;
+          font: bold 14pt;
+          padding: 4px;"
 
 add pushbutton Shutdown shutdown exit
 set shutdown icon "$shutdown_icon"

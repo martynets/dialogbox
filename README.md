@@ -1,4 +1,4 @@
-Copyright (C) 2015, 2016 Andriy Martynets [martynets@volia.ua](mailto:martynets@volia.ua)<br>
+Copyright (C) 2015, 2016 Andriy Martynets [andy.martynets@gmail.com](mailto:andy.martynets@gmail.com)<br>
 See end of this file for [license conditions](#license).
 
 -------------------------------------------------------------------------------
@@ -938,7 +938,7 @@ These applications are independent projects but all are collected here as they a
 Updates to these applications or publication of new ones does not trigger new release of the `dialogbox` project. This means that even if you have the source tree of the latest release of the project always check the [examples directory in the repository](https://github.com/martynets/dialogbox/tree/master/examples) to get the latest examples.
 
 #### Bug Reporting
-You can send `dialogbox` bug reports and/or any compatibility issues directly to the author [martynets@volia.ua](mailto:martynets@volia.ua).
+You can send `dialogbox` bug reports and/or any compatibility issues directly to the author [andy.martynets@gmail.com](mailto:andy.martynets@gmail.com).
 
 You can also use the online bug tracking system in the GitHub `dialogbox` project to submit new problem reports or search for existing ones:
 
@@ -958,7 +958,7 @@ There are some known bugs which root cause underlies in private Qt objects:
 |Nov 28, 2015    |0.8    |Initial development, non-released version|
 
 #### License
-Copyright (C) 2015, 2016 Andriy Martynets [martynets@volia.ua](mailto:martynets@volia.ua)<br>
+Copyright (C) 2015, 2016 Andriy Martynets [andy.martynets@gmail.com](mailto:andy.martynets@gmail.com)<br>
 This file is part of `dialogbox`.
 
 `dialogbox` is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 3 of the License, or (at your option) any later version.

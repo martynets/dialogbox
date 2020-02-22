@@ -4,27 +4,27 @@ flag=0
 
 while IFS=$'=' read key value
 do
-	case $key in
-		cb1)
-			if [ "$value" == "1" ]
-			then
-				echo Option 1 is checked
-			else
-				echo Option 1 is unchecked
-			fi
-			;;
-		txt1)
-			echo Text entered: $value
-			;;
-		okay)
-			flag=1
-			echo User clicked Ok pushbutton
-			;;
-		cancel)
-			flag=1
-			echo User clicked Cancel pushbutton
-			;;
-	esac
+  case $key in
+    cb1)
+      if [ "$value" == "1" ]
+      then
+        echo Option 1 is checked
+      else
+        echo Option 1 is unchecked
+      fi
+      ;;
+    txt1)
+      echo Text entered: $value
+      ;;
+    okay)
+      flag=1
+      echo User clicked Ok pushbutton
+      ;;
+    cancel)
+      flag=1
+      echo User clicked Cancel pushbutton
+      ;;
+  esac
 done < <(
 
 dialogbox <<EODEMO
@@ -47,7 +47,7 @@ EODEMO
 
 if [ "$flag" == "0" ]
 then
-	echo User closed the window
+  echo User closed the window
 fi
 
 exit 0

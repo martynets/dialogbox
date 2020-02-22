@@ -1,4 +1,4 @@
-Copyright (C) 2015 Andriy Martynets [martynets@volia.ua](mailto:martynets@volia.ua)<br>
+Copyright (C) 2015 Andriy Martynets [andy.martynets@gmail.com](mailto:andy.martynets@gmail.com)<br>
 See the end of the file for [license conditions](#license).
 
 -------------------------------------------------------------------------------
@@ -58,7 +58,7 @@ The `lxlogout-box` script doesn't accept any command line arguments. It can be c
 The `lxlogout-box` script does some heuristic to detect commands for screen lock, logout and user switch. This heuristic is similar to what the `lxsession-logout` application does. If this doesn't suit your particular environment the beginning of the script may be revised (it is commented in appropriate way).
 
 #### Bug Reporting
-You can send `lxlogout-box` bug reports and/or any compatibility issues directly to the author [martynets@volia.ua](mailto:martynets@volia.ua).
+You can send `lxlogout-box` bug reports and/or any compatibility issues directly to the author [andy.martynets@gmail.com](mailto:andy.martynets@gmail.com).
 
 You can also use the online bug tracking system in the GitHub `dialogbox` project to submit new problem reports or search for existing ones:
 
@@ -68,7 +68,7 @@ You can also use the online bug tracking system in the GitHub `dialogbox` projec
 1.0    Initial release
 
 #### License
-Copyright (C) 2015 Andriy Martynets [martynets@volia.ua](mailto:martynets@volia.ua)<br>
+Copyright (C) 2015 Andriy Martynets [andy.martynets@gmail.com](mailto:andy.martynets@gmail.com)<br>
 This file is part of `lxlogout-box`.
 
 `lxlogout-box` is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 3 of the License, or (at your option) any later version.

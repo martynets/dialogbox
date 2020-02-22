@@ -3,7 +3,7 @@
 #
 # Su-box installer version 1.0
 #
-# Copyright (C) 2015 Andriy Martynets <martynets@volia.ua>
+# Copyright (C) 2015 Andriy Martynets <andy.martynets@gmail.com>
 #--------------------------------------------------------------------------------------------------------------
 # This file is part of su-box.
 #
@@ -36,35 +36,35 @@ DEPENDENCIES=( "${DEPENDENCIES[@]}" \
 
 check_execpty()
 {
-	type execpty &>/dev/null && return 0
-	return 1
+  type execpty &>/dev/null && return 0
+  return 1
 }
 
 install_execpty()
 {
-	tmpdir=$( mktemp -d )
+  tmpdir=$( mktemp -d )
 
-	trap "while jobs % &>/dev/null; do kill %; wait %; done; rm -rf $tmpdir" EXIT
-	trap "exit" TERM INT HUP QUIT
+  trap "while jobs % &>/dev/null; do kill %; wait %; done; rm -rf $tmpdir" EXIT
+  trap "exit" TERM INT HUP QUIT
 
-	$PKGCHCK "$CC" &> /dev/null || $PKGINST "$CC" &> /dev/null &
-	wait
-	$PKGCHCK "$MAKE" &> /dev/null || $PKGINST "$MAKE" &> /dev/null &
-	wait
-	$PKGCHCK "$CLIB" &> /dev/null || $PKGINST "$CLIB" &> /dev/null &
-	wait
-	$PKGCHCK "$CC" "$MAKE" "$CLIB" &> /dev/null || exit
+  $PKGCHCK "$CC" &> /dev/null || $PKGINST "$CC" &> /dev/null &
+  wait
+  $PKGCHCK "$MAKE" &> /dev/null || $PKGINST "$MAKE" &> /dev/null &
+  wait
+  $PKGCHCK "$CLIB" &> /dev/null || $PKGINST "$CLIB" &> /dev/null &
+  wait
+  $PKGCHCK "$CC" "$MAKE" "$CLIB" &> /dev/null || exit
 
-	wget --quiet --no-check-certificate --continue -O - https://github.com/martynets/execpty/archive/1.0.tar.gz |\
-		tar --extract --ungzip --wildcards --directory $tmpdir &>/dev/null &
-	wait
-	pushd $tmpdir/execpty-1.0 &>/dev/null
-	make &
-	wait
-	make install &
-	wait
-	popd &>/dev/null
-	exit
+  wget --quiet --no-check-certificate --continue -O - https://github.com/martynets/execpty/archive/1.0.tar.gz |\
+    tar --extract --ungzip --wildcards --directory $tmpdir &>/dev/null &
+  wait
+  pushd $tmpdir/execpty-1.0 &>/dev/null
+  make &
+  wait
+  make install &
+  wait
+  popd &>/dev/null
+  exit
 }
 
 DEPENDENCIES=( "${DEPENDENCIES[@]}" \
@@ -76,14 +76,14 @@ DEPENDENCIES=( "${DEPENDENCIES[@]}" \
 
 check_su-box()
 {
-	type su-box &>/dev/null && return 0
-	return 1
+  type su-box &>/dev/null && return 0
+  return 1
 }
 
 install_su-box()
 {
-	# This is not a long-lasting process. No need in the template stuff...
-	install --mode=a=rx,u+w --target-directory=/usr/bin ./su-box
+  # This is not a long-lasting process. No need in the template stuff...
+  install --mode=a=rx,u+w --target-directory=/usr/bin ./su-box
 }
 
 main

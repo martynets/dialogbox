@@ -3,7 +3,7 @@
 #
 # Su-box version 1.1
 #
-# Copyright (C) 2015, 2016 Andriy Martynets <martynets@volia.ua>
+# Copyright (C) 2015, 2016 Andriy Martynets <andy.martynets@gmail.com>
 #--------------------------------------------------------------------------------------------------------------
 # This file is part of su-box.
 #
@@ -24,7 +24,7 @@ PROJECT_NAME="su-box"
 VERSION="1.1"
 
 # Exit status:
-# 1	authentication failure (derived from su)
+# 1  authentication failure (derived from su)
 E_SUCCESS=0
 E_ERROR=127
 E_CANCEL=128
@@ -44,41 +44,41 @@ COMMANDS_INDEX=0
 
 if ! type dialogbox &> /dev/null
 then
-	echo Dialogbox application is missing. Aborted.
-	exit $E_ERROR
+  echo Dialogbox application is missing. Aborted.
+  exit $E_ERROR
 fi
 
 if ! type execpty &> /dev/null
 then
-	echo Execpty application is missing. Aborted.
-	exit $E_ERROR
+  echo Execpty application is missing. Aborted.
+  exit $E_ERROR
 fi
 
 usage()
 {
-	cat << EOUSAGE
+  cat << EOUSAGE
 Usage:
-	${0##*/} [-t|--terminal] [-u|--user USERNAME] [-c|--command] [COMMAND]
-	${0##*/} -h|--help
-	${0##*/} -v|--version
+  ${0##*/} [-t|--terminal] [-u|--user USERNAME] [-c|--command] [COMMAND]
+  ${0##*/} -h|--help
+  ${0##*/} -v|--version
 GUI frontend for su command.
 
 Options are:
-	-h, --help	display this help and exit
-	-v, --version	output version information and exit
-	-t, --terminal	allow the command to interact with current terminal
-	-u, --user	specify the USERNAME to run as (root by default)
-	-c, --command	specify COMMAND and its arguments to run
+  -h, --help  display this help and exit
+  -v, --version  output version information and exit
+  -t, --terminal  allow the command to interact with current terminal
+  -u, --user  specify the USERNAME to run as (root by default)
+  -c, --command  specify COMMAND and its arguments to run
 
-	If command is not specified it will be asked for.
+  If command is not specified it will be asked for.
 
 Exit status:
-	- $E_SUCCESS	success (--help or --version only)
-	- 1	authentication failure (derived from su)
-	- $E_ERROR	failure (with corresponding error message)
-	- $E_CANCEL	the user cancelled operation
-	- if the command is terminated by a signal - the signal number plus 128
-	- on success - exit status of the command executed
+  - $E_SUCCESS  success (--help or --version only)
+  - 1  authentication failure (derived from su)
+  - $E_ERROR  failure (with corresponding error message)
+  - $E_CANCEL  the user cancelled operation
+  - if the command is terminated by a signal - the signal number plus 128
+  - on success - exit status of the command executed
 
 More information on <https://github.com/martynets/dialogbox/tree/master/examples/su-box/>.
 EOUSAGE
@@ -86,9 +86,9 @@ EOUSAGE
 
 version()
 {
-	cat << EOVERSION
+  cat << EOVERSION
 $PROJECT_NAME v$VERSION
-Copyright (C) 2015, 2016 Andriy Martynets <martynets@volia.ua>
+Copyright (C) 2015, 2016 Andriy Martynets <andy.martynets@gmail.com>
 License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.
 This program comes with ABSOLUTELY NO WARRANTY.
 This is free software, and you are welcome to redistribute it
@@ -100,29 +100,29 @@ EOVERSION
 
 if type icon-functions &> /dev/null
 then
-	. icon-functions
-	ICON_SIZE=24
-	icon_functions_init
-	ICON=""
-	find_actions_icon dialog-yes
-	ok_icon="$ICON"
-	ICON=""
-	find_actions_icon dialog-no
-	cancel_icon="$ICON"
+  . icon-functions
+  ICON_SIZE=24
+  icon_functions_init
+  ICON=""
+  find_actions_icon dialog-yes
+  ok_icon="$ICON"
+  ICON=""
+  find_actions_icon dialog-no
+  cancel_icon="$ICON"
 
-	ICON_SIZE=48
-	icon_functions_init
-	IFS=$'\n\r\t ' # restore default field separator
+  ICON_SIZE=48
+  icon_functions_init
+  IFS=$'\n\r\t ' # restore default field separator
 else
-	find_apps_icon()
-	{
-		return 0
-	}
+  find_apps_icon()
+  {
+    return 0
+  }
 
-	find_actions_icon()
-	{
-		return 0
-	}
+  find_actions_icon()
+  {
+    return 0
+  }
 fi
 
 USER=""
@@ -132,46 +132,46 @@ TERMINAL=""
 
 while [ $# -gt 0 ]
 do
-	case $1 in
-		-h | --help)
-			usage
-			exit $E_SUCCESS
-			;;
-		-v | --version)
-			version
-			exit $E_SUCCESS
-			;;
-		-u | --user)
-			shift
-			USER="$1"
-			;;
-		-t | --terminal)
-			TERMINAL="true"
-			;;
-		-c | --command)
-			shift
-			;&
-		*)
-			COMMAND="$@"
-			break
-			;;
-	esac
+  case $1 in
+    -h | --help)
+      usage
+      exit $E_SUCCESS
+      ;;
+    -v | --version)
+      version
+      exit $E_SUCCESS
+      ;;
+    -u | --user)
+      shift
+      USER="$1"
+      ;;
+    -t | --terminal)
+      TERMINAL="true"
+      ;;
+    -c | --command)
+      shift
+      ;&
+    *)
+      COMMAND="$@"
+      break
+      ;;
+  esac
 
-	shift
+  shift
 done
 
 if [ -n "$COMMAND" ]
 then
-	[ "$USER" == "$(id -un)" ] && exec $COMMAND
-	[ -n "$USER" ] && [ "$(id -u)" == "0" ] && exec su $USER -c "$COMMAND"
+  [ "$USER" == "$(id -un)" ] && exec $COMMAND
+  [ -n "$USER" ] && [ "$(id -u)" == "0" ] && exec su $USER -c "$COMMAND"
 fi
 
 ICON=""
 if [ -n "$COMMAND" ]
 then
-	find_apps_icon system-users || find_actions_icon system-run
+  find_apps_icon system-users || find_actions_icon system-run
 else
-	find_actions_icon system-run || find_apps_icon system-users
+  find_actions_icon system-run || find_apps_icon system-users
 fi
 auth_icon=${ICON:-"/usr/share/pixmaps/debian-security.png"}
 IFS=$'\n\r\t ' # restore default field separator
@@ -184,39 +184,39 @@ OUTPUTFD=${COPROC[1]}
 DBPID=$COPROC_PID
 
 cat >&$OUTPUTFD <<-EOUSER
-	add label "$auth_icon" img picture
-	step horizontal
-	add combobox "&User name:" usr
-	add textbox "&Password:" pswd password "$PASSWORD" "Enter the password"
-	step vertical
-	add separator horizontal
-	add frame horizontal
-	add stretch
-	add pushbutton &Ok okay apply exit
-	add pushbutton C&ancel cancel exit
+  add label "$auth_icon" img picture
+  step horizontal
+  add combobox "&User name:" usr
+  add textbox "&Password:" pswd password "$PASSWORD" "Enter the password"
+  step vertical
+  add separator horizontal
+  add frame horizontal
+  add stretch
+  add pushbutton &Ok okay apply exit
+  add pushbutton C&ancel cancel exit
 
-	set icon "$auth_icon"
-	set okay icon "$ok_icon"
-	set cancel icon "$cancel_icon"
+  set icon "$auth_icon"
+  set okay icon "$ok_icon"
+  set cancel icon "$cancel_icon"
 
-	set usr  stylesheet "QLabel {min-width: 5em;} QComboBox {min-width: 15em; max-width: 15em;}"
-	set pswd stylesheet "QLabel {min-width: 5em;} QLineEdit {min-width: 15em; max-width: 15em;}"
+  set usr  stylesheet "QLabel {min-width: 5em;} QComboBox {min-width: 15em; max-width: 15em;}"
+  set pswd stylesheet "QLabel {min-width: 5em;} QLineEdit {min-width: 15em; max-width: 15em;}"
 
-	set img stylesheet "padding: 10px;"
+  set img stylesheet "padding: 10px;"
 
-	set okay default
+  set okay default
 
 EOUSER
 
 while IFS=$':' read username password userid groupid fullname homedir shell
 do
-	shell=${shell##*/}		# extract the shell name (truncate its path)
-	homedir=${homedir#/}
-	homedir=${homedir%%/*}	# extract the 1st level directory of the home directory
-	if [[ ! "$NOLOGIN_SHELLS" =~ (^|:)$shell(:|$) ]] && [[ ! "$DAEMON_HOMEDIRS" =~ (^|:)$homedir(:|$) ]]
-	then
-		echo add item $username >&$OUTPUTFD
-	fi
+  shell=${shell##*/}    # extract the shell name (truncate its path)
+  homedir=${homedir#/}
+  homedir=${homedir%%/*}  # extract the 1st level directory of the home directory
+  if [[ ! "$NOLOGIN_SHELLS" =~ (^|:)$shell(:|$) ]] && [[ ! "$DAEMON_HOMEDIRS" =~ (^|:)$homedir(:|$) ]]
+  then
+    echo add item $username >&$OUTPUTFD
+  fi
 done </etc/passwd
 
 echo set usr text $USER >&$OUTPUTFD
@@ -225,50 +225,50 @@ use_cache=0
 
 if [ -n "$COMMAND" ]
 then
-	cat >&$OUTPUTFD <<-EOUSER
-		position usr
-		add label "Command:<blockquote><code>$COMMAND</code></blockquote>requested to be run with different user credentials. Please provide the user's password:" msg
-		set title "User credentials required"
-		set msg stylesheet "qproperty-textInteractionFlags: NoTextInteraction; min-width: 20em;"
-		disable usr
-		set pswd focus
+  cat >&$OUTPUTFD <<-EOUSER
+    position usr
+    add label "Command:<blockquote><code>$COMMAND</code></blockquote>requested to be run with different user credentials. Please provide the user's password:" msg
+    set title "User credentials required"
+    set msg stylesheet "qproperty-textInteractionFlags: NoTextInteraction; min-width: 20em;"
+    disable usr
+    set pswd focus
 EOUSER
-	if [ "$(id -u)" == "0" ]
-	then
-		cat >&$OUTPUTFD <<-EOUSER
-			enable usr
-			disable pswd
-			set usr focus
+  if [ "$(id -u)" == "0" ]
+  then
+    cat >&$OUTPUTFD <<-EOUSER
+      enable usr
+      disable pswd
+      set usr focus
 EOUSER
-	fi
+  fi
 else
-	cat >&$OUTPUTFD <<-EOUSER
-		position usr
-		#add textbox "Command:" cmd "" "Enter the command to run"
-		add combobox "&Command:" cmd
-		set title "Run as..."
-		set cmd stylesheet "QLabel {min-width: 5em;} QComboBox {min-width: 15em; max-width: 15em;}"
-		set cmd focus
+  cat >&$OUTPUTFD <<-EOUSER
+    position usr
+    #add textbox "Command:" cmd "" "Enter the command to run"
+    add combobox "&Command:" cmd
+    set title "Run as..."
+    set cmd stylesheet "QLabel {min-width: 5em;} QComboBox {min-width: 15em; max-width: 15em;}"
+    set cmd focus
 EOUSER
-	[ "$(id -u)" == "0" ] && echo "disable pswd" >&$OUTPUTFD
+  [ "$(id -u)" == "0" ] && echo "disable pswd" >&$OUTPUTFD
 
-	use_cache=1
-	# load cache file
-	# Ensure the directory of the cache file exists
-	cachedir="${COMMANDS_CACHE_FILE%/*}"
-	[ ! -d "$cachedir" ] && mkdir -p "$cachedir"
+  use_cache=1
+  # load cache file
+  # Ensure the directory of the cache file exists
+  cachedir="${COMMANDS_CACHE_FILE%/*}"
+  [ ! -d "$cachedir" ] && mkdir -p "$cachedir"
 
-	if [ -r "$COMMANDS_CACHE_FILE" ]
-	then
-		IFS=$'\r\n'
-		COMMANDS=( $(<"$COMMANDS_CACHE_FILE") )
-		COMMANDS_INDEX=${#COMMANDS[*]}
-		for(( i=0; i<COMMANDS_INDEX; i++ ))
-		do
-			echo add item \"${COMMANDS[i]}\" >&$OUTPUTFD
-		done
-		IFS=$'\n\r\t ' # restore default value of internal field separator
-	fi
+  if [ -r "$COMMANDS_CACHE_FILE" ]
+  then
+    IFS=$'\r\n'
+    COMMANDS=( $(<"$COMMANDS_CACHE_FILE") )
+    COMMANDS_INDEX=${#COMMANDS[*]}
+    for(( i=0; i<COMMANDS_INDEX; i++ ))
+    do
+      echo add item \"${COMMANDS[i]}\" >&$OUTPUTFD
+    done
+    IFS=$'\n\r\t ' # restore default value of internal field separator
+  fi
 
 fi
 
@@ -278,20 +278,20 @@ accepted=0
 
 while IFS=$'=' read key value
 do
-	case $key in
-		cmd)
-			COMMAND="$value"
-			;;
-		usr)
-			USER="$value"
-			;;
-		pswd)
-			PASSWORD="$value"
-			;;
-		okay)
-			accepted=1
-			;;
-	esac
+  case $key in
+    cmd)
+      COMMAND="$value"
+      ;;
+    usr)
+      USER="$value"
+      ;;
+    pswd)
+      PASSWORD="$value"
+      ;;
+    okay)
+      accepted=1
+      ;;
+  esac
 done <&$INPUTFD
 
 wait $DBPID
@@ -301,24 +301,24 @@ wait $DBPID
 # save cache file
 if [ "$use_cache" == "1" ] && [ -n "$COMMAND" ]
 then
-	echo ${COMMAND} >"$COMMANDS_CACHE_FILE"
-	j=1
-	for(( i=0; i<COMMANDS_INDEX && j<CACHE_SIZE; i++ ))
-	do
-		if [ "${COMMANDS[i]}" != "${COMMAND}" ]
-		then
-			echo ${COMMANDS[i]} >>"$COMMANDS_CACHE_FILE"
-			((j++))
-		fi
-	done
+  echo ${COMMAND} >"$COMMANDS_CACHE_FILE"
+  j=1
+  for(( i=0; i<COMMANDS_INDEX && j<CACHE_SIZE; i++ ))
+  do
+    if [ "${COMMANDS[i]}" != "${COMMAND}" ]
+    then
+      echo ${COMMANDS[i]} >>"$COMMANDS_CACHE_FILE"
+      ((j++))
+    fi
+  done
 fi
 
 if [ -z "$TERMINAL" ]
 then
-	echo $PASSWORD | execpty su $USER -c "$COMMAND" &>/dev/null
+  echo $PASSWORD | execpty su $USER -c "$COMMAND" &>/dev/null
 else
-	exec 3<&0
-	exec 4>&1
-	exec 5>&2
-	echo $PASSWORD | execpty su $USER -c "$COMMAND <&3 >&4 2>&5" &>/dev/null
+  exec 3<&0
+  exec 4>&1
+  exec 5>&2
+  echo $PASSWORD | execpty su $USER -c "$COMMAND <&3 >&4 2>&5" &>/dev/null
 fi
