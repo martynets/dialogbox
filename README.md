@@ -33,12 +33,12 @@ The main purpose of this application is to provide GUI functionality to shell sc
 This is a Qt application and it introduces all the power of Qt to shell scripts from command buttons through stylesheets and animations.
 
 #### Software Requirements
-This application is designed using the Qt 4.8 library and this is the only run-time dependency. It must be portable across systems supported by the Qt but the author tested it in GNU/Linux environment only.
+This application was designed for Qt 4.8, but the new versions will be using the Qt 5 library. It must be portable across systems supported by the Qt libraries, but the author tested it in GNU/Linux environment only.
 
 To compile the application from the source code the following packages must also be installed on a GNU/Linux system - build-time dependencies:
 - g++
 - make
-- libqt4-dev
+- qtbase5-dev
 
 #### Downloading
 The latest released version of the `dialogbox` application can be checked by the link below:
@@ -61,6 +61,11 @@ make
 make install
 ```
 > Note: the application is installed in `/usr/bin` directory and thus the last one command requires root privileges
+
+If you want to make sure that it compiles using Qt5 libraries, select it as the default.
+```
+export QT_SELECT=qt5
+```
 
 To uninstall the application issue the following command from the same directory (the same note is applicable here):
 ```
