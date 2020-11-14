@@ -65,7 +65,6 @@ qmake -qt=qt5 -makefile
 ```
 To compile and install the application, issue the following commands from the source directory:
 ```
-qmake
 make
 make install
 ```
