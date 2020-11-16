@@ -23,7 +23,12 @@
 #ifndef DIALOGBOX_H_
 #define DIALOGBOX_H_
 
-#include <QtGui>
+#include <QtGlobal>
+#if QT_VERSION >= 0x050000
+    #include <QtWidgets>
+#else
+    #include <QtGui>
+#endif
 
 #define DEFAULT_ALIGNMENT Qt::Alignment(0)
 #define GRAPHICS_ALIGNMENT Qt::AlignCenter

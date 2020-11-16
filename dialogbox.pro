@@ -1,6 +1,8 @@
 TEMPLATE = app
 CONFIG += qt thread release
-QT +=
+greaterThan(QT_MAJOR_VERSION, 4) {
+    QT += widgets
+}
 
 TARGET = dialogbox
 VPATH = src
